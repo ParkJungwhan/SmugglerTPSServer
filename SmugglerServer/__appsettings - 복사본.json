@@ -7,11 +7,7 @@
     "InGameP95Ms": 150
   },
   "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning"
-    },
+    "Level": "Information",
     "EmitMetrics": true
-  },
-  "AllowedHosts": "*"
+  }
 }
