@@ -1,0 +1,3 @@
+[submodule "Client"]
+	path = Client
+	url = https://github.com/NyanReal/ue5udp-battle.git
