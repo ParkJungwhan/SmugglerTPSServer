@@ -1,4 +1,5 @@
 ﻿using SmugglerServer.Lib;
+using TPSServer.Lib;
 
 namespace SmugglerServer;
 
@@ -12,13 +13,13 @@ public class SmugglerWorld
         Console.WriteLine($"{DateTime.Now}\tHello World");
 
         ////////////////////////////////////////////////////////////////
-        ushort port = 7777;
+        ushort port = NetConstants.DefaultPort;
 
         ServerManager server = new ServerManager();
 
         try
         {
-            if (!server.Initialize("0.0.0.0", port, 32))
+            if (!server.Initialize("127.0.0.1", port))
             {
                 Log.PrintLog("Server Initialize Failed!", MsgLevel.Error);
                 return;

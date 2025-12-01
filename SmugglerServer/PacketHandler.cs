@@ -1,6 +1,5 @@
 ﻿using ENet;
 using Google.FlatBuffers;
-using Protocol;
 
 namespace SmugglerServer;
 

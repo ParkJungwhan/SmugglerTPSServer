@@ -8,35 +8,41 @@ public class ServerManager : IDisposable
 {
     private Host server;
     private Address address;
-    private RoomManager roomManager;
+    private bool m_isConnected = false;
 
-    public delegate void UDPEvent(object sender, Event netEvent);
-
-    public event UDPEvent evNetEvent;
+    public bool IsConnected
+    {
+        get { return m_isConnected; }
+    }
 
     public ServerManager()
     {
-        if (!ENet.Library.Initialize())
+        var intilib = Library.Initialize();
+        if (false == intilib)
         {
-            Log.PrintLog("Failed to initialize ENet", MsgLevel.Error);
             throw new Exception("Failed to initialize ENet library");
         }
+
+        uint time = Library.Time;
+        Log.PrintLog($"ENet Library.Time : {time}");
     }
 
-    public bool Initialize(string ip, ushort port, int maxClients = 32, int channels = 2)
+    public bool Initialize(string ip, ushort port)
     {
         if (string.IsNullOrEmpty(ip)) return false;
 
-        server = new Host();
+        int maxClients = 32;
+        int channels = 2;
+
         address = new Address();
-        address.SetIP(ip);
+        address.SetHost(ip);
         address.Port = port;
 
-        roomManager = new();
-
+        server = new Host();
         server.Create(address, maxClients, channels);
 
-        roomManager.SetHost(server);
+        //roomManager = new();
+        //roomManager.SetHost(server);
 
         Debug.Assert(server != null);
         return server.IsSet;
@@ -61,16 +67,16 @@ public class ServerManager : IDisposable
             ProcessPacketQueue();
 
             // 3. Room Update → Move 브로드캐스트
-            roomManager.Update(currentTimeMs);
+            //roomManager.Update(currentTimeMs);
 
             // 3.5 일정 시간 이상 딜레이 킥
-            int[] expiredPlayers = roomManager.GetAndClearExpiredPlayers();
-            //for (int playerSequence = 0; playerSequence < expiredPlayers)
-            for (int i = 0; i < expiredPlayers.Length; i++)
-            {
-                var playerSequence = expiredPlayers[i];
-                // 확인해서 끊기
-            }
+            //int[] expiredPlayers = roomManager.GetAndClearExpiredPlayers();
+            //////for (int playerSequence = 0; playerSequence < expiredPlayers)
+            //for (int i = 0; i < expiredPlayers.Length; i++)
+            //{
+            //    var playerSequence = expiredPlayers[i];
+            //    // 확인해서 끊기
+            //}
 
             // 4. 프레임 레이트 유지(min :30fps)
             var frameEnd = SteadyClock.Now();
@@ -85,7 +91,7 @@ public class ServerManager : IDisposable
 
         server!.Flush();
         server.Dispose();
-        ENet.Library.Deinitialize();
+        Library.Deinitialize();
     }
 
     public void Stop()
@@ -94,17 +100,9 @@ public class ServerManager : IDisposable
 
     internal void PollNetworkEvents()
     {
-        Event netEvent;
-        var polled = false;
-
-        while (!polled)
+        ENet.Event netEvent;
+        while (server.Service(15, out netEvent) > 0)
         {
-            if (server!.CheckEvents(out netEvent) <= 0)
-            {
-                if (server.Service(15, out netEvent) <= 0) break;
-                polled = true;
-            }
-
             switch (netEvent.Type)
             {
                 case EventType.Connect:
@@ -115,7 +113,7 @@ public class ServerManager : IDisposable
                     {
                         // 패킷 데이터를 큐에 복사
 
-                        netEvent.Packet.Dispose();
+                        //netEvent.Packet.Dispose();    // 큐에 넣을때는 바로 dispose 하지 말라고 한다
                         break;
                     }
 
@@ -144,6 +142,6 @@ public class ServerManager : IDisposable
 
     public void Dispose()
     {
-        ENet.Library.Deinitialize();
+        Library.Deinitialize();
     }
 }
