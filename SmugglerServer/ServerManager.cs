@@ -1,5 +1,8 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices.JavaScript;
 using ENet;
+using Google.FlatBuffers;
+using Protocol;
 using SmugglerServer.Lib;
 
 namespace SmugglerServer;
@@ -43,6 +46,8 @@ public class ServerManager : IDisposable
 
         //roomManager = new();
         //roomManager.SetHost(server);
+
+        SetHandler();
 
         Debug.Assert(server != null);
         return server.IsSet;
@@ -124,6 +129,122 @@ public class ServerManager : IDisposable
                 default: break;
             }
         }
+    }
+
+    private void SetHandler()
+    {
+        RegisterHandler<CLAuthRequest>(EProtocol.CL_AuthRequest, OnCLAuthRequest);
+        RegisterHandler<CLAuthRequest>(EProtocol.CS_LoadCompleteRequest, OnCSLoadCompleteRequest);
+        RegisterHandler<CLAuthRequest>(EProtocol.CS_MoveNotification, OnCSMoveNotification);
+        RegisterHandler<CLAuthRequest>(EProtocol.CS_Heartbeat, OnCSHeartbeat);
+        RegisterHandler<CLAuthRequest>(EProtocol.CS_AttackRequest, OnCSAttackRequest);
+    }
+
+    private void OnCSAttackRequest(Event @event, CLAuthRequest request)
+    {
+        //@event.Peer.Send();
+    }
+
+    private void OnCSHeartbeat(Event @event, CLAuthRequest request)
+    {
+    }
+
+    private void OnCSMoveNotification(Event @event, CLAuthRequest request)
+    {
+    }
+
+    private void OnCSLoadCompleteRequest(Event @event, CLAuthRequest request)
+    {
+    }
+
+    private Dictionary<int, Action<Event, IFlatbufferObject>> HandlerDic =
+        new Dictionary<int, Action<Event, IFlatbufferObject>>();
+
+    public void RegisterHandler<T>(EProtocol protocol, Action<Event, T> action) where T : struct, IFlatbufferObject
+    {
+        HandlerDic.Add((int)protocol, (e, f) =>
+        {
+            byte[] buffer = new byte[1024];
+            e.Packet.CopyTo(buffer);
+
+            Google.FlatBuffers.Table tb = new Google.FlatBuffers.Table(0, new ByteBuffer(buffer, buffer.Length));
+            action(e, tb.__union<T>(buffer.Length));
+        });
+    }
+
+    private Dictionary<int, int> m_playerSequenceToSessionKey = new Dictionary<int, int>();
+    private Dictionary<int, string> m_playerSequenceToDeviceKey = new Dictionary<int, string>();
+    private Dictionary<int, string> m_playerSequenceToUserName = new Dictionary<int, string>();
+    private Dictionary<int, string> m_playerSequenceToRoomCode = new Dictionary<int, string>();
+    private Dictionary<string, int> m_deviceKeyToPlayerSequence = new Dictionary<string, int>();
+    private Dictionary<Event, int> m_peerToPlayerSequence = new Dictionary<Event, int>();
+    private int m_nextSessionKey;
+    private int m_nextPlayerSequence;
+
+    private void OnCLAuthRequest(Event peer, Protocol.CLAuthRequest msg)
+    {
+        string deviceKey = string.IsNullOrEmpty(msg.DeviceKey) ? string.Empty : msg.DeviceKey;
+        string userName = string.IsNullOrEmpty(msg.UserName) ? string.Empty : msg.UserName;
+        int appearanceId = msg.AppearanceId;
+
+        Log.PrintLog($"[RECV] CL_AuthRequest (Player:{userName}, Appearance: {appearanceId}) ");
+
+        int playerSequence = GetOrCreatePlayerSequence(deviceKey);
+        int sessionKey = m_nextSessionKey++;
+
+        m_playerSequenceToSessionKey[playerSequence] = sessionKey;
+        m_playerSequenceToDeviceKey[playerSequence] = deviceKey;
+        m_playerSequenceToUserName[playerSequence] = userName;
+        m_peerToPlayerSequence[peer] = playerSequence;
+
+        SendAuthResponse(peer, playerSequence, sessionKey);
+        //m_roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
+    }
+
+    private void SendAuthResponse(Event NetEvent, int playerSequence, int sessionKey)
+    {
+        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+
+        builder.Finish(LCAuthResponse.CreateLCAuthResponse(
+            builder,
+            sessionKey,
+            playerSequence,
+            EProtocol.LC_AuthResponse
+        ).Value);
+
+        server.Flush();
+
+        var wrapper = PacketWrapper.Create(
+            EProtocol.LC_AuthResponse,
+            builder.DataBuffer.ToSizedArray(),
+            builder.Offset);
+
+        Packet packet = new Packet();
+        packet.Create(
+            wrapper.GetRawData(),
+            wrapper.GetRawSize(),
+            PacketFlags.Reliable);
+
+        if (!NetEvent.Peer.Send(CHANNEL_RELIABLE, ref packet))
+        {
+            Log.PrintLog("Fail SendAuthResponse");
+        }
+
+        server.Flush();
+    }
+
+    private const int CHANNEL_RELIABLE = 0;
+
+    private int GetOrCreatePlayerSequence(string deviceKey)
+    {
+        if (m_deviceKeyToPlayerSequence.TryGetValue(deviceKey, out int value))
+        {
+            return value;
+        }
+
+        int newSequence = m_nextPlayerSequence++;
+        m_deviceKeyToPlayerSequence[deviceKey] = newSequence;
+        return newSequence;
     }
 
     private void HandleDisconnect(Event netEvent)

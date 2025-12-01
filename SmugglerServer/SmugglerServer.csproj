@@ -32,6 +32,12 @@
     <PackageReference Include="Google.FlatBuffers" Version="25.2.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="enet.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="flatc --csharp -o Generated ..\Client\Protocol\protocol.fbs" />
   </Target>
