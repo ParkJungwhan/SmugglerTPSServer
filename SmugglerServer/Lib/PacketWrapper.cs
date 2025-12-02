@@ -9,7 +9,6 @@ internal class PacketWrapper
     public static PacketWrapper Create(Protocol.EProtocol protocol, byte[] fbData, int fbSize)
     {
         PacketWrapper wrapper = new PacketWrapper();
-
         wrapper.m_data = new byte[4 + fbSize];
 
         int protocolId = (int)protocol;

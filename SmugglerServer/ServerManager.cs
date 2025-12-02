@@ -25,6 +25,7 @@ public class ServerManager : IDisposable
     //private Dictionary<int, Action<Event, IFlatbufferObject>> HandlerDic = new Dictionary<int, Action<Event, IFlatbufferObject>>();
 
     private const int CHANNEL_RELIABLE = 0;
+    private const int CHANNEL_UNRELIABLE = 1;
     private int m_nextSessionKey;
     private int m_nextPlayerSequence;
 
@@ -183,6 +184,39 @@ public class ServerManager : IDisposable
 
     private bool PingPong(Peer peer, CSPing msg)
     {
+        long clientTick = msg.ClientTick;
+        long serverTick = TimeUtil.GetSystemTimeInMilliseconds();
+
+        FlatBufferBuilder builder = new FlatBufferBuilder(256);
+
+        builder.Finish(
+            SCPong.CreateSCPong(
+                builder,
+                clientTick,
+                serverTick,
+                EProtocol.SC_Pong)
+            .Value);
+
+        server.Flush();
+
+        var wrapper = PacketWrapper.Create(
+            EProtocol.SC_Pong,
+            builder.DataBuffer.ToSizedArray(),
+            builder.Offset);
+
+        Packet packet = new Packet();
+        packet.Create(
+            wrapper.GetRawData(),
+            wrapper.GetRawSize(),
+            PacketFlags.None);
+
+        if (!peer.Send(CHANNEL_UNRELIABLE, ref packet))
+        {
+            Log.PrintLog("Fail Send Pong");
+        }
+
+        server.Flush();
+
         return true;
     }
 
@@ -193,9 +227,9 @@ public class ServerManager : IDisposable
         return CSPing.GetRootAsCSPing(csbuffer);
     }
 
-    private CLAuthRequest GetRootAuth(ReadOnlySpan<byte> buffer)
+    private CLAuthRequest GetRootAuth(byte[] buffer)
     {
-        ByteBuffer csbuffer = new ByteBuffer(buffer.ToArray());
+        ByteBuffer csbuffer = new ByteBuffer(buffer);
         return CLAuthRequest.GetRootAsCLAuthRequest(csbuffer);
     }
 
