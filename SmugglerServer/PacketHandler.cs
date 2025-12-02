@@ -1,67 +1,90 @@
-﻿using ENet;
+﻿using System.Buffers.Binary;
+using ENet;
 using Google.FlatBuffers;
+using SmugglerServer.Lib;
 
 namespace SmugglerServer;
 
 internal class PacketHandler
 {
-    private Dictionary<int, Action<Peer>> HandlerDic;
+    //public delegate bool HandlerFunc(Peer peer, ByteBuffer buffer);
+    //public delegate bool HandlerFunc(Peer peer, ReadOnlySpan<byte> buffer);
+    public delegate bool HandlerFunc(Peer peer, byte[] buffer);
 
-    internal void RegisterHandler<T>(int protocol, Action<Peer, T> value) where T : struct, IFlatbufferObject
+    private readonly Dictionary<int, HandlerFunc> _handlers = new();
+
+    public void RegisterHandler<TMessage>(
+    Func<Peer, TMessage, bool> handler,               // 실제 비즈니스 로직
+    //Func<ByteBuffer, bool> verifyBuffer,                  // 예: LoginRequest.VerifyLoginRequest
+    Func<byte[], TMessage> getRoot,                   // 예: LoginRequest.GetRootAsLoginRequest
+    int messageId)
     {
+        bool Invoker(Peer peer, byte[] bb)
+        {
+            // 1) FlatBuffer 검증
+            //if (!verifyBuffer(bb))
+            //    return false;
+
+            // 2) 루트 객체 읽기
+            var msg = getRoot(bb);
+            // struct 타입이면 null 체크 무의미하지만, C++ 구조를 맞춰두자
+            if (msg == null)
+                return false;
+
+            // 3) 실제 핸들러 호출
+            return handler(peer, msg);
+        }
+
+        _handlers[messageId] = Invoker;
     }
 
-    //public virtual void RegisterHandler(int protocol, Action<Peer> action)
-    //    => this.HandlerDic.Add(protocol, (Action<Peer>)(packet => action(packet)));
+    public bool Dispatch(Peer peer, byte[] data, int dataSize)
+    {
+        if (data == null || dataSize == 0)
+        {
+            Log.PrintLog("Invalid packet data", MsgLevel.Error);
+            Console.Error.WriteLine("Invalid packet data");
+            return false;
+        }
 
-    //public delegate bool HandlerFunc(Peer peer, byte[] data, int dataSize);
+        int messageId = ExtractMessageId(data, dataSize);
+        if (messageId == 0)
+        {
+            Log.PrintLog("Failed to extract message ID", MsgLevel.Error);
+            return false;
+        }
 
-    //private readonly Dictionary<int, HandlerFunc> _handlers = new();
+        if (!_handlers.TryGetValue(messageId, out var handler))
+        {
+            Log.PrintLog($"No handler registered for message ID: {messageId}", MsgLevel.Error);
+            return false;
+        }
 
-    //// template <typename DispatcherType, typename MessageType>
-    //public void RegisterHandler<TDispatcher, TMessage>(
-    //    Func<TDispatcher, Peer, TMessage, bool> handler,   // (instance, peer, msg) -> bool
-    //    TDispatcher instance,
-    //    int messageId)
-    //{
-    //    bool Invoker(Peer peer, byte[] data, int dataSize)
-    //    {
-    //        // --- FlatBuffers 검증 부분 (라이브러리에 맞게 구현해야 함) ---
+        if (dataSize < 4)
+        {
+            Log.PrintLog("Packet too small", MsgLevel.Error);
+            return false;
+        }
 
-    //        // 예: data[0..dataSize]만 잘라서 쓴다고 가정
-    //        // ReadOnlySpan<byte> span = new ReadOnlySpan<byte>(data, 0, dataSize);
+        ByteBuffer bb = new ByteBuffer(data);
 
-    //        // TODO: 사용 중인 FlatBuffers C# API에 맞게 검증 구현
-    //        // 예시 (FlatSharp 같은 걸 쓴다면):
-    //        // if (!FlatBufferSerializer.Default.TryParse<TMessage>(span, out var msg))
-    //        //     return false;
+        ReadOnlySpan<byte> fbData = new ReadOnlySpan<byte>(data, 4, dataSize - 4);
+        return handler(peer, fbData.ToArray());
+        //return handler(peer, bb);
+    }
 
-    //        // 여기서는 구조만 맞춰서 작성
-    //        TMessage msg = GetRoot<TMessage>(data, dataSize);
-    //        if (msg == null)
-    //            return false;
+    internal int ExtractMessageId(byte[] data, int dataSize)
+    {
+        // 패킷 구조: [4 bytes EProtocol:int][FlatBuffer 데이터]
+        // 앞 4바이트를 읽어서 프로토콜 ID를 추출
 
-    //        // C++: (instance->*handler)(peer, *msg);
-    //        return handler(instance, peer, msg);
-    //    }
+        if (data == null || dataSize < 4)
+        {
+            return 0;
+        }
 
-    //    _handlers[messageId] = Invoker;
-    //}
+        int protocolId = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(0, 4));
 
-    //// C++의 flatbuffers::GetRoot<MessageType>(data) 에 해당하는 부분을
-    //// 실제 사용하는 FlatBuffers C# 라이브러리에 맞게 구현해야 함.
-    //private static TMessage GetRoot<TMessage>(byte[] data, int dataSize)
-    //{
-    //    // ↓↓ 여기는 실제 환경에 맞게 바꿔 써야 하는 자리 ↓↓
-
-    //    // 예) FlatSharp 사용 시:
-    //    // ReadOnlyMemory<byte> mem = new ReadOnlyMemory<byte>(data, 0, dataSize);
-    //    // return FlatBufferSerializer.Default.Parse<TMessage>(mem);
-
-    //    // 예) Google.FlatBuffers 사용 시 (MessageType에 맞는 GetRootAsXXX 호출 필요)
-    //    // var bb = new ByteBuffer(data);
-    //    // return MessageType.GetRootAsMessageType(bb); // 이 부분은 제너릭으로는 직접 호출 불가
-
-    //    throw new NotImplementedException("FlatBuffers GetRoot<TMessage> 구현 필요");
-    //}
+        return protocolId;
+    }
 }

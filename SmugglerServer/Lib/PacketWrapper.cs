@@ -1,6 +1,4 @@
-﻿using System.Xml.Linq;
-using Protocol;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using Protocol;
 
 namespace SmugglerServer.Lib;
 
@@ -8,27 +6,16 @@ internal class PacketWrapper
 {
     private byte[] m_data;
 
-    public static PacketWrapper Create(EProtocol protocol, byte[] fbData, int fbSize)
+    public static PacketWrapper Create(Protocol.EProtocol protocol, byte[] fbData, int fbSize)
     {
-        var wrapper = new PacketWrapper();
+        PacketWrapper wrapper = new PacketWrapper();
+
         wrapper.m_data = new byte[4 + fbSize];
 
-        // protocolId → 4바이트 little-endian 저장
-        BitConverter.TryWriteBytes(wrapper.m_data.AsSpan(0, 4), (int)protocol);
+        int protocolId = (int)protocol;
+        Buffer.BlockCopy(BitConverter.GetBytes(protocolId), 0, wrapper.m_data, 0, 4);
 
-        // FlatBuffer payload 복사
-        fbData.AsSpan(0, fbSize).CopyTo(wrapper.m_data.AsSpan(4));
-
-        return wrapper;
-    }
-
-    public static PacketWrapper Create(EProtocol protocol, ReadOnlySpan<byte> fbData)
-    {
-        var wrapper = new PacketWrapper();
-        wrapper.m_data = new byte[4 + fbData.Length];
-
-        BitConverter.TryWriteBytes(wrapper.m_data.AsSpan(0, 4), (int)protocol);
-        fbData.CopyTo(wrapper.m_data.AsSpan(4));
+        Buffer.BlockCopy(fbData, 0, wrapper.m_data, 4, fbSize);
 
         return wrapper;
     }
@@ -51,4 +38,20 @@ internal class PacketWrapper
     internal byte[] GetRawData() => m_data;
 
     internal int GetRawSize() => m_data.Length;
+
+    public static EProtocol ExtractProtocol(byte[] data, int dataSize)
+    {
+        return (data == null || dataSize < 4) ?
+            EProtocol.None :
+            (EProtocol)BitConverter.ToInt32(data, 0);
+    }
+
+    public static byte[] ExtractFlatBufferData(byte[] data, int dataSize)
+    {
+        if (data == null || dataSize <= 4) return null;
+
+        byte[] fbData = new byte[dataSize - 4];
+        Buffer.BlockCopy(data, 4, fbData, 0, fbData.Length);
+        return fbData;
+    }
 }

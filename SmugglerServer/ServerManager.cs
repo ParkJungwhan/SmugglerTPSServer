@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.InteropServices.JavaScript;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -12,6 +11,30 @@ public class ServerManager : IDisposable
     private Host server;
     private Address address;
     private bool m_isConnected = false;
+
+    private Dictionary<int, int> m_playerSequenceToSessionKey = new Dictionary<int, int>();
+    private Dictionary<int, string> m_playerSequenceToDeviceKey = new Dictionary<int, string>();
+    private Dictionary<int, string> m_playerSequenceToUserName = new Dictionary<int, string>();
+    private Dictionary<int, string> m_playerSequenceToRoomCode = new Dictionary<int, string>();
+    private Dictionary<string, int> m_deviceKeyToPlayerSequence = new Dictionary<string, int>();
+    private Dictionary<Peer, int> m_peerToPlayerSequence = new Dictionary<Peer, int>();
+    private Queue<ReceivedPacket> ReceiveQueue = new Queue<ReceivedPacket>();
+
+    private PacketHandler PacketHandler = new PacketHandler();
+
+    //private Dictionary<int, Action<Event, IFlatbufferObject>> HandlerDic = new Dictionary<int, Action<Event, IFlatbufferObject>>();
+
+    private const int CHANNEL_RELIABLE = 0;
+    private int m_nextSessionKey;
+    private int m_nextPlayerSequence;
+
+    private object m_lock = new object();
+
+    public struct ReceivedPacket
+    {
+        public Peer peer;
+        public byte[] data;
+    };
 
     public bool IsConnected
     {
@@ -106,19 +129,34 @@ public class ServerManager : IDisposable
     internal void PollNetworkEvents()
     {
         ENet.Event netEvent;
+
         while (server.Service(15, out netEvent) > 0)
         {
             switch (netEvent.Type)
             {
                 case EventType.Connect:
                     HandleConnect(netEvent);
+                    // 연결 처리라서 따로 처리 안함. 이후 패킷인 인증 등은 receive 쪽에서 처리
                     break;
 
                 case EventType.Receive:
                     {
                         // 패킷 데이터를 큐에 복사
+                        ReceivedPacket packet;
+                        packet.peer = netEvent.Peer;
+                        packet.data = new byte[netEvent.Packet.Length];
 
-                        //netEvent.Packet.Dispose();    // 큐에 넣을때는 바로 dispose 하지 말라고 한다
+                        byte[] buffer = new byte[netEvent.Packet.Length];
+                        netEvent.Packet.CopyTo(buffer);
+
+                        Buffer.BlockCopy(buffer, 0, packet.data, 0, netEvent.Packet.Length);
+
+                        lock (m_lock)
+                        {
+                            ReceiveQueue.Enqueue(packet);
+                        }
+
+                        netEvent.Packet.Dispose();    // 큐에 넣을때는 바로 dispose 하지 말라고 한다. 그러나 packet을 buffer에 넣었으니...
                         break;
                     }
 
@@ -133,12 +171,61 @@ public class ServerManager : IDisposable
 
     private void SetHandler()
     {
-        RegisterHandler<CLAuthRequest>(EProtocol.CL_AuthRequest, OnCLAuthRequest);
-        RegisterHandler<CLAuthRequest>(EProtocol.CS_LoadCompleteRequest, OnCSLoadCompleteRequest);
-        RegisterHandler<CLAuthRequest>(EProtocol.CS_MoveNotification, OnCSMoveNotification);
-        RegisterHandler<CLAuthRequest>(EProtocol.CS_Heartbeat, OnCSHeartbeat);
-        RegisterHandler<CLAuthRequest>(EProtocol.CS_AttackRequest, OnCSAttackRequest);
+        // PING 부분에서 패킷 정상 처리 및 변환까지 처리하는 부분 확인됨
+        PacketHandler.RegisterHandler<CSPing>(PingPong, GetPingCheck, (int)EProtocol.CS_Ping);
+        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCLAuthRequest, GetRootAuth, (int)EProtocol.CL_AuthRequest);
+        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCLAuthRequest, (int)EProtocol.CL_AuthRequest);
+        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSLoadCompleteRequest, (int)EProtocol.CS_LoadCompleteRequest);
+        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSMoveNotification, (int)EProtocol.CS_MoveNotification);
+        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSHeartbeat, (int)EProtocol.CS_Heartbeat);
+        //PacketHandler.RegisterHandler<CSAttackRequest>(OnCSAttackRequest, this, (int)EProtocol.CS_AttackRequest);
     }
+
+    private bool PingPong(Peer peer, CSPing msg)
+    {
+        return true;
+    }
+
+    //private CSPing GetPingCheck(ByteBuffer buffer)
+    private CSPing GetPingCheck(byte[] buffer)
+    {
+        ByteBuffer csbuffer = new ByteBuffer(buffer);
+        return CSPing.GetRootAsCSPing(csbuffer);
+    }
+
+    private CLAuthRequest GetRootAuth(ReadOnlySpan<byte> buffer)
+    {
+        ByteBuffer csbuffer = new ByteBuffer(buffer.ToArray());
+        return CLAuthRequest.GetRootAsCLAuthRequest(csbuffer);
+    }
+
+    private bool OnCLAuthRequest(Peer peer, CLAuthRequest msg)
+    {
+        string deviceKey = string.IsNullOrEmpty(msg.DeviceKey) ? string.Empty : msg.DeviceKey;
+        string userName = string.IsNullOrEmpty(msg.UserName) ? string.Empty : msg.UserName;
+        int appearanceId = msg.AppearanceId;
+
+        Log.PrintLog($"[RECV] CL_AuthRequest (Player:{userName}, Appearance: {appearanceId}) ");
+
+        int playerSequence = GetOrCreatePlayerSequence(deviceKey);
+        int sessionKey = m_nextSessionKey++;
+
+        m_playerSequenceToSessionKey[playerSequence] = sessionKey;
+        m_playerSequenceToDeviceKey[playerSequence] = deviceKey;
+        m_playerSequenceToUserName[playerSequence] = userName;
+        m_peerToPlayerSequence[peer] = playerSequence;
+
+        SendAuthResponse(peer, playerSequence, sessionKey);
+        //m_roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
+
+        return true;
+    }
+
+    //private bool VerifyCLAuth()
+    //{
+    //    return;
+
+    //}
 
     private void OnCSAttackRequest(Event @event, CLAuthRequest request)
     {
@@ -157,51 +244,7 @@ public class ServerManager : IDisposable
     {
     }
 
-    private Dictionary<int, Action<Event, IFlatbufferObject>> HandlerDic =
-        new Dictionary<int, Action<Event, IFlatbufferObject>>();
-
-    public void RegisterHandler<T>(EProtocol protocol, Action<Event, T> action) where T : struct, IFlatbufferObject
-    {
-        HandlerDic.Add((int)protocol, (e, f) =>
-        {
-            byte[] buffer = new byte[1024];
-            e.Packet.CopyTo(buffer);
-
-            Google.FlatBuffers.Table tb = new Google.FlatBuffers.Table(0, new ByteBuffer(buffer, buffer.Length));
-            action(e, tb.__union<T>(buffer.Length));
-        });
-    }
-
-    private Dictionary<int, int> m_playerSequenceToSessionKey = new Dictionary<int, int>();
-    private Dictionary<int, string> m_playerSequenceToDeviceKey = new Dictionary<int, string>();
-    private Dictionary<int, string> m_playerSequenceToUserName = new Dictionary<int, string>();
-    private Dictionary<int, string> m_playerSequenceToRoomCode = new Dictionary<int, string>();
-    private Dictionary<string, int> m_deviceKeyToPlayerSequence = new Dictionary<string, int>();
-    private Dictionary<Event, int> m_peerToPlayerSequence = new Dictionary<Event, int>();
-    private int m_nextSessionKey;
-    private int m_nextPlayerSequence;
-
-    private void OnCLAuthRequest(Event peer, Protocol.CLAuthRequest msg)
-    {
-        string deviceKey = string.IsNullOrEmpty(msg.DeviceKey) ? string.Empty : msg.DeviceKey;
-        string userName = string.IsNullOrEmpty(msg.UserName) ? string.Empty : msg.UserName;
-        int appearanceId = msg.AppearanceId;
-
-        Log.PrintLog($"[RECV] CL_AuthRequest (Player:{userName}, Appearance: {appearanceId}) ");
-
-        int playerSequence = GetOrCreatePlayerSequence(deviceKey);
-        int sessionKey = m_nextSessionKey++;
-
-        m_playerSequenceToSessionKey[playerSequence] = sessionKey;
-        m_playerSequenceToDeviceKey[playerSequence] = deviceKey;
-        m_playerSequenceToUserName[playerSequence] = userName;
-        m_peerToPlayerSequence[peer] = playerSequence;
-
-        SendAuthResponse(peer, playerSequence, sessionKey);
-        //m_roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
-    }
-
-    private void SendAuthResponse(Event NetEvent, int playerSequence, int sessionKey)
+    private void SendAuthResponse(Peer peer, int playerSequence, int sessionKey)
     {
         FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
@@ -225,15 +268,13 @@ public class ServerManager : IDisposable
             wrapper.GetRawSize(),
             PacketFlags.Reliable);
 
-        if (!NetEvent.Peer.Send(CHANNEL_RELIABLE, ref packet))
+        if (!peer.Send(CHANNEL_RELIABLE, ref packet))
         {
             Log.PrintLog("Fail SendAuthResponse");
         }
 
         server.Flush();
     }
-
-    private const int CHANNEL_RELIABLE = 0;
 
     private int GetOrCreatePlayerSequence(string deviceKey)
     {
@@ -259,6 +300,25 @@ public class ServerManager : IDisposable
 
     private void ProcessPacketQueue()
     {
+        if (ReceiveQueue.Count == 0) return;
+
+        Queue<ReceivedPacket> localQueue;
+
+        lock (m_lock)
+        {
+            localQueue = ReceiveQueue;
+            ReceiveQueue = new Queue<ReceivedPacket>();
+        }
+
+        while (localQueue.Count > 0)
+        {
+            var packet = localQueue.Dequeue();
+
+            PacketHandler.Dispatch(
+                packet.peer,
+                packet.data,
+                packet.data.Length);
+        }
     }
 
     public void Dispose()
