@@ -1,8 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
 using SmugglerServer.Lib;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmugglerServer;
 
@@ -142,6 +144,14 @@ public class ServerManager : IDisposable
 
                 case EventType.Receive:
                     {
+                        // CS_Ping은 즉시 처리 (RTT 측정 정확도), 로컬에서는 평균 0에서 10이하로 나와야 한다.
+                        // 이외 모든 패킷은 큐에서 돌린다
+                        if (TryHandlePingImmediate(netEvent.Peer, netEvent.Packet))
+                        {
+                            netEvent.Packet.Dispose();
+                            break;
+                        }
+
                         // 패킷 데이터를 큐에 복사
                         ReceivedPacket packet;
                         packet.peer = netEvent.Peer;
@@ -170,10 +180,29 @@ public class ServerManager : IDisposable
         }
     }
 
+    private bool TryHandlePingImmediate(Peer peer, Packet packet)
+    {
+        if (packet.Length < 8) return false;
+
+        byte[] buffer = new byte[packet.Length];
+        packet.CopyTo(buffer);
+
+        int messageID = PacketHandler.ExtractMessageId(buffer, buffer.Length);
+        if (messageID == (int)EProtocol.CS_Ping)
+        {
+            ReadOnlySpan<byte> fbData = new ReadOnlySpan<byte>(buffer, 4, packet.Length - 4);
+            CSPing msg = GetPingCheck(fbData.ToArray());
+            return PingPong(peer, msg);
+        }
+
+        return false;
+    }
+
     private void SetHandler()
     {
         // PING 부분에서 패킷 정상 처리 및 변환까지 처리하는 부분 확인됨
-        PacketHandler.RegisterHandler<CSPing>(PingPong, GetPingCheck, (int)EProtocol.CS_Ping);
+        // PacketHandler.RegisterHandler<CSPing>(PingPong, GetPingCheck, (int)EProtocol.CS_Ping); // 삭제 - 위에서 우선처리
+
         //PacketHandler.RegisterHandler<CLAuthRequest>(OnCLAuthRequest, GetRootAuth, (int)EProtocol.CL_AuthRequest);
         //PacketHandler.RegisterHandler<CLAuthRequest>(OnCLAuthRequest, (int)EProtocol.CL_AuthRequest);
         //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSLoadCompleteRequest, (int)EProtocol.CS_LoadCompleteRequest);
