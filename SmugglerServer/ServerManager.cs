@@ -1,13 +1,14 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
 using SmugglerServer.Lib;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SmugglerServer;
 
+/// <summary>
+///
+/// </summary>
 public class ServerManager : IDisposable
 {
     private Host server;
@@ -22,9 +23,9 @@ public class ServerManager : IDisposable
     private Dictionary<Peer, int> m_peerToPlayerSequence = new Dictionary<Peer, int>();
     private Queue<ReceivedPacket> ReceiveQueue = new Queue<ReceivedPacket>();
 
-    private PacketHandler PacketHandler = new PacketHandler();
+    private RoomManager roomManager;
 
-    //private Dictionary<int, Action<Event, IFlatbufferObject>> HandlerDic = new Dictionary<int, Action<Event, IFlatbufferObject>>();
+    private PacketHandler PacketHandler = new PacketHandler();
 
     private const int CHANNEL_RELIABLE = 0;
     private const int CHANNEL_UNRELIABLE = 1;
@@ -70,10 +71,12 @@ public class ServerManager : IDisposable
         server = new Host();
         server.Create(address, maxClients, channels);
 
-        //roomManager = new();
-        //roomManager.SetHost(server);
+        roomManager = new();
+        roomManager.SetHost(server);
 
         SetHandler();
+
+        Log.PrintLog($"Server initialized on port {port} (max clients: {maxClients}) ");
 
         Debug.Assert(server != null);
         return server.IsSet;
@@ -98,7 +101,7 @@ public class ServerManager : IDisposable
             ProcessPacketQueue();
 
             // 3. Room Update → Move 브로드캐스트
-            //roomManager.Update(currentTimeMs);
+            roomManager.Update(currentTimeMs);
 
             // 3.5 일정 시간 이상 딜레이 킥
             //int[] expiredPlayers = roomManager.GetAndClearExpiredPlayers();
@@ -164,6 +167,7 @@ public class ServerManager : IDisposable
 
                         lock (m_lock)
                         {
+                            // 큐에 넣고 내부 핸들러에서 처리함
                             ReceiveQueue.Enqueue(packet);
                         }
 
@@ -191,7 +195,7 @@ public class ServerManager : IDisposable
         if (messageID == (int)EProtocol.CS_Ping)
         {
             ReadOnlySpan<byte> fbData = new ReadOnlySpan<byte>(buffer, 4, packet.Length - 4);
-            CSPing msg = GetPingCheck(fbData.ToArray());
+            CSPing msg = CSPing.GetRootAsCSPing(new ByteBuffer(fbData.ToArray()));
             return PingPong(peer, msg);
         }
 
@@ -203,12 +207,35 @@ public class ServerManager : IDisposable
         // PING 부분에서 패킷 정상 처리 및 변환까지 처리하는 부분 확인됨
         // PacketHandler.RegisterHandler<CSPing>(PingPong, GetPingCheck, (int)EProtocol.CS_Ping); // 삭제 - 위에서 우선처리
 
-        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCLAuthRequest, GetRootAuth, (int)EProtocol.CL_AuthRequest);
-        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCLAuthRequest, (int)EProtocol.CL_AuthRequest);
-        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSLoadCompleteRequest, (int)EProtocol.CS_LoadCompleteRequest);
-        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSMoveNotification, (int)EProtocol.CS_MoveNotification);
-        //PacketHandler.RegisterHandler<CLAuthRequest>(OnCSHeartbeat, (int)EProtocol.CS_Heartbeat);
-        //PacketHandler.RegisterHandler<CSAttackRequest>(OnCSAttackRequest, this, (int)EProtocol.CS_AttackRequest);
+        // 1 완료
+        PacketHandler.RegisterHandler<CLAuthRequest>(
+            OnCLAuthRequest,
+            CLAuthRequest.GetRootAsCLAuthRequest,
+            (int)EProtocol.CL_AuthRequest);
+
+        // 2
+        PacketHandler.RegisterHandler<CSLoadCompleteRequest>(
+            OnCSLoadCompleteRequest,
+            CSLoadCompleteRequest.GetRootAsCSLoadCompleteRequest,
+            (int)EProtocol.CS_LoadCompleteRequest);
+
+        // 3
+        PacketHandler.RegisterHandler<CSMoveNotification>(
+            OnCSMoveNotification,
+            CSMoveNotification.GetRootAsCSMoveNotification,
+            (int)EProtocol.CS_MoveNotification);
+
+        // 3
+        PacketHandler.RegisterHandler<CSHeartbeat>(
+            OnCSHeartbeat,
+            CSHeartbeat.GetRootAsCSHeartbeat,
+            (int)EProtocol.CS_Heartbeat);
+
+        // 4
+        PacketHandler.RegisterHandler<CSAttackRequest>(
+            OnCSAttackRequest,
+            CSAttackRequest.GetRootAsCSAttackRequest,
+            (int)EProtocol.CS_AttackRequest);
     }
 
     private bool PingPong(Peer peer, CSPing msg)
@@ -249,19 +276,6 @@ public class ServerManager : IDisposable
         return true;
     }
 
-    //private CSPing GetPingCheck(ByteBuffer buffer)
-    private CSPing GetPingCheck(byte[] buffer)
-    {
-        ByteBuffer csbuffer = new ByteBuffer(buffer);
-        return CSPing.GetRootAsCSPing(csbuffer);
-    }
-
-    private CLAuthRequest GetRootAuth(byte[] buffer)
-    {
-        ByteBuffer csbuffer = new ByteBuffer(buffer);
-        return CLAuthRequest.GetRootAsCLAuthRequest(csbuffer);
-    }
-
     private bool OnCLAuthRequest(Peer peer, CLAuthRequest msg)
     {
         string deviceKey = string.IsNullOrEmpty(msg.DeviceKey) ? string.Empty : msg.DeviceKey;
@@ -279,32 +293,104 @@ public class ServerManager : IDisposable
         m_peerToPlayerSequence[peer] = playerSequence;
 
         SendAuthResponse(peer, playerSequence, sessionKey);
-        //m_roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
+        roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
 
         return true;
     }
 
-    //private bool VerifyCLAuth()
-    //{
-    //    return;
-
-    //}
-
-    private void OnCSAttackRequest(Event @event, CLAuthRequest request)
+    private bool OnCSLoadCompleteRequest(Peer peer, CSLoadCompleteRequest request)
     {
-        //@event.Peer.Send();
+        if (!m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
+        {
+            return false;
+        }
+
+        if (!ValidateSessionKey(playerSequence, request.SessionKey))
+        {
+            return false;
+        }
+
+        Log.PrintLog($"[RECV] CS_LoadCompleteRequest (PlayerSeq:{playerSequence}) ");
+
+        // 1 패킷 lodacomplete 전달
+        // 2 룸 매니저에 플레이어 로드 완료 알림
+
+        // SC_LoadCompleteResponse 패킷 만들기
+        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+
+        builder.Finish(SCLoadCompleteResponse.CreateSCLoadCompleteResponse(
+            builder,
+            request.SessionKey,
+            EProtocol.SC_LoadCompleteResponse).Value);
+
+        var wrapper = PacketWrapper.Create(
+            EProtocol.SC_LoadCompleteResponse,
+            builder.DataBuffer.ToSizedArray(),
+            builder.Offset);
+
+        Packet packet = new Packet();
+        packet.Create(
+            wrapper.GetRawData(),
+            wrapper.GetRawSize(),
+            PacketFlags.Reliable);
+
+        if (!peer.Send(CHANNEL_RELIABLE, ref packet))
+        {
+            Log.PrintLog("Fail SendAuthResponse");
+        }
+
+        server.Flush();
+
+        // 룸에 세팅
+        Room room = roomManager.GetPlayerRoom(peer);
+        if (room is not null)
+        {
+            if (m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
+            {
+                return false;
+            }
+
+            room.SendExsitingPlayers(peer);
+
+            PC player = room.GetPlayer(playerSequence);
+            int appearenceId = player is null ? 0 : player.GetAppearanceID();
+
+            room.BroadcastAddNotification(
+                playerSequence,
+                userName,
+                appearenceId,
+                0.0f,
+                0.0f,
+                0);
+
+            Log.PrintLog($"[RECV] SC_AddNotification broadcasted (PlayerSeq:{playerSequence}) ");
+        }
+
+        return true;
     }
 
-    private void OnCSHeartbeat(Event @event, CLAuthRequest request)
+    private bool ValidateSessionKey(int playerSequence, int sessionKey)
     {
+        if (!m_playerSequenceToSessionKey.TryGetValue(playerSequence, out int validSessionKey))
+        {
+            return false;
+        }
+        return validSessionKey == sessionKey;
     }
 
-    private void OnCSMoveNotification(Event @event, CLAuthRequest request)
+    private bool OnCSMoveNotification(Peer peer, CSMoveNotification request)
     {
+        return true;
     }
 
-    private void OnCSLoadCompleteRequest(Event @event, CLAuthRequest request)
+    private bool OnCSAttackRequest(Peer peer, CSAttackRequest request)
     {
+        return true;
+    }
+
+    private bool OnCSHeartbeat(Peer peer, CSHeartbeat request)
+    {
+        return true;
     }
 
     private void SendAuthResponse(Peer peer, int playerSequence, int sessionKey)
@@ -386,6 +472,7 @@ public class ServerManager : IDisposable
 
     public void Dispose()
     {
+        // 모든 큐들 다 dispose 처리
         Library.Deinitialize();
     }
 }

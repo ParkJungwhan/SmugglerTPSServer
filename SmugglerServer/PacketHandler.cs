@@ -1,4 +1,5 @@
-﻿using System.Buffers.Binary;
+﻿using System;
+using System.Buffers.Binary;
 using ENet;
 using Google.FlatBuffers;
 using SmugglerServer.Lib;
@@ -7,8 +8,6 @@ namespace SmugglerServer;
 
 internal class PacketHandler
 {
-    //public delegate bool HandlerFunc(Peer peer, ByteBuffer buffer);
-    //public delegate bool HandlerFunc(Peer peer, ReadOnlySpan<byte> buffer);
     public delegate bool HandlerFunc(Peer peer, byte[] buffer);
 
     private readonly Dictionary<int, HandlerFunc> _handlers = new();
@@ -16,7 +15,7 @@ internal class PacketHandler
     public void RegisterHandler<TMessage>(
     Func<Peer, TMessage, bool> handler,               // 실제 비즈니스 로직
     //Func<ByteBuffer, bool> verifyBuffer,                  // 예: LoginRequest.VerifyLoginRequest
-    Func<byte[], TMessage> getRoot,                   // 예: LoginRequest.GetRootAsLoginRequest
+    Func<ByteBuffer, TMessage> getRoot,                   // 예: LoginRequest.GetRootAsLoginRequest
     int messageId)
     {
         bool Invoker(Peer peer, byte[] bb)
@@ -26,7 +25,9 @@ internal class PacketHandler
             //    return false;
 
             // 2) 루트 객체 읽기
-            var msg = getRoot(bb);
+            //            new ByteBuffer(buffer)
+            var msg = getRoot(new ByteBuffer(bb));
+
             // struct 타입이면 null 체크 무의미하지만, C++ 구조를 맞춰두자
             if (msg == null)
                 return false;
