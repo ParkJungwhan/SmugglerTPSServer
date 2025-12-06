@@ -1,5 +1,9 @@
-﻿using ENet;
+﻿using System.Diagnostics;
+using System.Security.Cryptography;
+using ENet;
+using Google.FlatBuffers;
 using SmugglerServer.Lib;
+using TPSServer.Lib;
 
 namespace SmugglerServer;
 
@@ -11,6 +15,8 @@ internal class RoomManager
     private int ROOM_MAX_COUNT = 50;
     private Host m_host;
     private Room m_currentRoom;
+
+    private static readonly char[] Charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".ToCharArray();
 
     public RoomManager()
     {
@@ -33,13 +39,71 @@ internal class RoomManager
         }
         else
         {
+            string roomCode = GenerateRoomCode();
+            Debug.WriteLine($"{DateTime.Now}\tMake Room Code : {roomCode}");
+            Room newRoom = new Room(roomCode);
+            newRoom.SetHost(m_host);
+            m_rooms.Add(newRoom);
+            m_currentRoom = newRoom;
+            targetRoom = newRoom;
+        }
+
+        if (targetRoom.AddPlayer(peer, playerSequence, sessionKey, userName, appearanceId))
+        {
+            m_playerRoomMap[peer] = targetRoom;
+
+            PC player = targetRoom.GetPlayer(playerSequence);
+            float startX = player is null ? 0.0f : player.GetPositionX();
+            float startY = player is null ? 0.0f : player.GetPositionY();
+
+            FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+            var roomCodeOffset = builder.CreateString(targetRoom.GetRoomCode());
+            var enterRoom = Protocol.SCEnterRoom.CreateSCEnterRoom(builder,
+                sessionKey,
+                playerSequence,
+                roomCodeOffset,
+                appearanceId,
+                startX,
+                startY,
+                Protocol.EProtocol.SC_EnterRoom);
+            builder.Finish(enterRoom.Value);
+
+            PacketWrapper wrapper = PacketWrapper.Create(
+                Protocol.EProtocol.SC_EnterRoom,
+                builder.DataBuffer.ToFullArray(),
+                builder.Offset);
+
+            Packet packet = new Packet();
+            packet.Create(
+                wrapper.GetRawData(),
+                wrapper.GetRawSize(),
+                PacketFlags.Reliable);
+
+            if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
+            {
+                Log.PrintLog("Fail SCEnterRoom");
+            }
+
+            m_host?.Flush();
+
+            Log.PrintLog($"[SEND] SC_EnterRoom (Seq: {playerSequence}, Room: {targetRoom.GetRoomCode()}, Appearance: {appearanceId}, Pos: {startX},{startY})");
         }
     }
 
     private string GenerateRoomCode()
     {
-        // TODO : 암호값으로 생성된 4자리 수를 리턴
-        return null;
+        Span<byte> buffer = stackalloc byte[4]; // 4자리 코드
+        RandomNumberGenerator.Fill(buffer);
+
+        char[] code = new char[4];
+
+        for (int i = 0; i < 4; i++)
+        {
+            int index = buffer[i] % Charset.Length;
+            code[i] = Charset[index];
+        }
+
+        return new string(code);
     }
 
     internal int[] GetAndClearExpiredPlayers()

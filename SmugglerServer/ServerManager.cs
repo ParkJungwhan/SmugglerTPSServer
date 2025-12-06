@@ -3,6 +3,7 @@ using ENet;
 using Google.FlatBuffers;
 using Protocol;
 using SmugglerServer.Lib;
+using TPSServer.Lib;
 
 namespace SmugglerServer;
 
@@ -27,10 +28,8 @@ public class ServerManager : IDisposable
 
     private PacketHandler PacketHandler = new PacketHandler();
 
-    private const int CHANNEL_RELIABLE = 0;
-    private const int CHANNEL_UNRELIABLE = 1;
-    private int m_nextSessionKey;
-    private int m_nextPlayerSequence;
+    private int m_nextSessionKey = 10000;
+    private int m_nextPlayerSequence = 1000;
 
     private object m_lock = new object();
 
@@ -159,11 +158,14 @@ public class ServerManager : IDisposable
                         ReceivedPacket packet;
                         packet.peer = netEvent.Peer;
                         packet.data = new byte[netEvent.Packet.Length];
+                        netEvent.Packet.CopyTo(packet.data);
 
-                        byte[] buffer = new byte[netEvent.Packet.Length];
-                        netEvent.Packet.CopyTo(buffer);
+                        Debug.WriteLine($"[Recv Packet] Length : {packet.data.Length}, Protocol :{(EProtocol)((int)packet.data[0])} ");
 
-                        Buffer.BlockCopy(buffer, 0, packet.data, 0, netEvent.Packet.Length);
+                        //byte[] buffer = new byte[netEvent.Packet.Length];
+                        //netEvent.Packet.CopyTo(buffer);
+
+                        //Buffer.BlockCopy(buffer, 0, packet.data, 0, netEvent.Packet.Length);
 
                         lock (m_lock)
                         {
@@ -211,31 +213,31 @@ public class ServerManager : IDisposable
         PacketHandler.RegisterHandler<CLAuthRequest>(
             OnCLAuthRequest,
             CLAuthRequest.GetRootAsCLAuthRequest,
-            (int)EProtocol.CL_AuthRequest);
+            EProtocol.CL_AuthRequest);
 
         // 2
         PacketHandler.RegisterHandler<CSLoadCompleteRequest>(
             OnCSLoadCompleteRequest,
             CSLoadCompleteRequest.GetRootAsCSLoadCompleteRequest,
-            (int)EProtocol.CS_LoadCompleteRequest);
+            EProtocol.CS_LoadCompleteRequest);
 
         // 3
         PacketHandler.RegisterHandler<CSMoveNotification>(
             OnCSMoveNotification,
             CSMoveNotification.GetRootAsCSMoveNotification,
-            (int)EProtocol.CS_MoveNotification);
+            EProtocol.CS_MoveNotification);
 
         // 3
         PacketHandler.RegisterHandler<CSHeartbeat>(
             OnCSHeartbeat,
             CSHeartbeat.GetRootAsCSHeartbeat,
-            (int)EProtocol.CS_Heartbeat);
+            EProtocol.CS_Heartbeat);
 
         // 4
         PacketHandler.RegisterHandler<CSAttackRequest>(
             OnCSAttackRequest,
             CSAttackRequest.GetRootAsCSAttackRequest,
-            (int)EProtocol.CS_AttackRequest);
+            EProtocol.CS_AttackRequest);
     }
 
     private bool PingPong(Peer peer, CSPing msg)
@@ -243,7 +245,7 @@ public class ServerManager : IDisposable
         long clientTick = msg.ClientTick;
         long serverTick = TimeUtil.GetSystemTimeInMilliseconds();
 
-        FlatBufferBuilder builder = new FlatBufferBuilder(256);
+        FlatBufferBuilder builder = new FlatBufferBuilder(128);
 
         builder.Finish(
             SCPong.CreateSCPong(
@@ -266,7 +268,7 @@ public class ServerManager : IDisposable
             wrapper.GetRawSize(),
             PacketFlags.None);
 
-        if (!peer.Send(CHANNEL_UNRELIABLE, ref packet))
+        if (!peer.Send(UDPConn.CHANNEL_UNRELIABLE, ref packet))
         {
             Log.PrintLog("Fail Send Pong");
         }
@@ -278,6 +280,8 @@ public class ServerManager : IDisposable
 
     private bool OnCLAuthRequest(Peer peer, CLAuthRequest msg)
     {
+        Debug.WriteLine($"{DateTime.Now}\t[OnCLAuthRequest] Process Start : {msg.UserName}");
+
         string deviceKey = string.IsNullOrEmpty(msg.DeviceKey) ? string.Empty : msg.DeviceKey;
         string userName = string.IsNullOrEmpty(msg.UserName) ? string.Empty : msg.UserName;
         int appearanceId = msg.AppearanceId;
@@ -295,11 +299,16 @@ public class ServerManager : IDisposable
         SendAuthResponse(peer, playerSequence, sessionKey);
         roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
 
+        Log.PrintLog($"[SEND] LC_AuthResponse (Seq: {playerSequence}, Session: {sessionKey}) ");
+
+        Debug.WriteLine($"{DateTime.Now}\t[OnCLAuthRequest] Process Complete : {msg.UserName}, SessionKey : {msg.AppearanceId}");
         return true;
     }
 
     private bool OnCSLoadCompleteRequest(Peer peer, CSLoadCompleteRequest request)
     {
+        Debug.WriteLine($"{DateTime.Now}\t[OnCSLoadCompleteRequest] Process Start : {request.SessionKey}");
+
         if (!m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
             return false;
@@ -334,18 +343,20 @@ public class ServerManager : IDisposable
             wrapper.GetRawSize(),
             PacketFlags.Reliable);
 
-        if (!peer.Send(CHANNEL_RELIABLE, ref packet))
+        if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SendAuthResponse");
+            Log.PrintLog("Fail SC_LoadCompleteResponse");
         }
 
         server.Flush();
+
+        Log.PrintLog($"[SEND] SC_LoadCompleteResponse (Seq:{playerSequence}) ");
 
         // 룸에 세팅
         Room room = roomManager.GetPlayerRoom(peer);
         if (room is not null)
         {
-            if (m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
+            if (!m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
             {
                 return false;
             }
@@ -366,30 +377,57 @@ public class ServerManager : IDisposable
             Log.PrintLog($"[RECV] SC_AddNotification broadcasted (PlayerSeq:{playerSequence}) ");
         }
 
+        Debug.WriteLine($"{DateTime.Now}\t[OnCSLoadCompleteRequest] Process Complete : {request.SessionKey}");
+
         return true;
     }
 
     private bool ValidateSessionKey(int playerSequence, int sessionKey)
     {
-        if (!m_playerSequenceToSessionKey.TryGetValue(playerSequence, out int validSessionKey))
-        {
-            return false;
-        }
+        if (!m_playerSequenceToSessionKey.TryGetValue(playerSequence, out int validSessionKey)) return false;
+
         return validSessionKey == sessionKey;
     }
 
     private bool OnCSMoveNotification(Peer peer, CSMoveNotification request)
     {
+        Debug.WriteLine($"{DateTime.Now}\t [OnCSMoveNotification] Process Start : {request.SessionKey}");
+        Debug.WriteLine($"{DateTime.Now}\t ================");
+
         return true;
     }
 
     private bool OnCSAttackRequest(Peer peer, CSAttackRequest request)
     {
+        Debug.WriteLine($"{DateTime.Now}\t [OnCSAttackRequest] Process Start : {request.SessionKey}");
+        Debug.WriteLine($"{DateTime.Now}\t ================");
+
         return true;
     }
 
     private bool OnCSHeartbeat(Peer peer, CSHeartbeat request)
     {
+        Debug.WriteLine($"{DateTime.Now}\t [OnCSHeartbeat] Process Start : {request.SessionKey}");
+
+        if (m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
+        if (!ValidateSessionKey(playerSequence, request.SessionKey)) return false;
+
+        var now = SteadyClock.Now();
+        long currentTime = now.TimeSinceEpochMs;
+
+        Room room = roomManager.GetPlayerRoom(peer);
+        if (room is not null)
+        {
+            PC player = room.GetPlayerByPeer(peer);
+            if (player is not null)
+            {
+                player.UpdateLastReceived(currentTime);
+
+                Debug.WriteLine($"{DateTime.Now}\tOnCSHeartbeat : {request.SessionKey}");
+            }
+        }
+
+        Debug.WriteLine($"{DateTime.Now}\t [OnCSHeartbeat] Process Complete : {request.SessionKey}");
         return true;
     }
 
@@ -404,8 +442,6 @@ public class ServerManager : IDisposable
             EProtocol.LC_AuthResponse
         ).Value);
 
-        server.Flush();
-
         var wrapper = PacketWrapper.Create(
             EProtocol.LC_AuthResponse,
             builder.DataBuffer.ToSizedArray(),
@@ -417,7 +453,7 @@ public class ServerManager : IDisposable
             wrapper.GetRawSize(),
             PacketFlags.Reliable);
 
-        if (!peer.Send(CHANNEL_RELIABLE, ref packet))
+        if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
             Log.PrintLog("Fail SendAuthResponse");
         }

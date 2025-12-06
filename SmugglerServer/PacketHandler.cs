@@ -1,7 +1,7 @@
-﻿using System;
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using ENet;
 using Google.FlatBuffers;
+using Protocol;
 using SmugglerServer.Lib;
 
 namespace SmugglerServer;
@@ -16,7 +16,7 @@ internal class PacketHandler
     Func<Peer, TMessage, bool> handler,               // 실제 비즈니스 로직
     //Func<ByteBuffer, bool> verifyBuffer,                  // 예: LoginRequest.VerifyLoginRequest
     Func<ByteBuffer, TMessage> getRoot,                   // 예: LoginRequest.GetRootAsLoginRequest
-    int messageId)
+    EProtocol messageId)
     {
         bool Invoker(Peer peer, byte[] bb)
         {
@@ -25,7 +25,6 @@ internal class PacketHandler
             //    return false;
 
             // 2) 루트 객체 읽기
-            //            new ByteBuffer(buffer)
             var msg = getRoot(new ByteBuffer(bb));
 
             // struct 타입이면 null 체크 무의미하지만, C++ 구조를 맞춰두자
@@ -36,7 +35,7 @@ internal class PacketHandler
             return handler(peer, msg);
         }
 
-        _handlers[messageId] = Invoker;
+        _handlers[(int)messageId] = Invoker;
     }
 
     public bool Dispatch(Peer peer, byte[] data, int dataSize)
@@ -71,18 +70,13 @@ internal class PacketHandler
 
         ReadOnlySpan<byte> fbData = new ReadOnlySpan<byte>(data, 4, dataSize - 4);
         return handler(peer, fbData.ToArray());
-        //return handler(peer, bb);
     }
 
     internal int ExtractMessageId(byte[] data, int dataSize)
     {
         // 패킷 구조: [4 bytes EProtocol:int][FlatBuffer 데이터]
         // 앞 4바이트를 읽어서 프로토콜 ID를 추출
-
-        if (data == null || dataSize < 4)
-        {
-            return 0;
-        }
+        if (data == null || dataSize < 4) return 0;
 
         int protocolId = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(0, 4));
 

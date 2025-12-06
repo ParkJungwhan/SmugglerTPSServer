@@ -1,28 +1,29 @@
-﻿using System.Xml.Linq;
-using ENet;
+﻿using ENet;
 
-namespace SmugglerServer
+namespace SmugglerServer;
+
+internal class PC : BaseObject
 {
-    internal class PC : BaseObject
-    {
-        private Peer m_peer;
-        private int m_sessionKey;
-        private bool m_isDead;
-        private long m_deathTime;
-        private bool m_isDisconnected;
+    private Peer m_peer;
+    private int m_sessionKey;
+    private bool m_isDead;
+    private long m_deathTime;
+    private bool m_isDisconnected;
+    private long m_lastReceivedTime;
 
-        internal void SetPeer(Peer peer) => m_peer = peer;
+    internal void SetPeer(Peer peer) => m_peer = peer;
 
-        internal Peer GetPeer() => m_peer;
+    internal Peer GetPeer() => m_peer;
 
-        private void SetSessionKey(int key) => m_sessionKey = key;
+    private void SetSessionKey(int key) => m_sessionKey = key;
 
-        private int GetSessionKey() => m_sessionKey;
+    private int GetSessionKey() => m_sessionKey;
 
-        internal bool IsDeadState() => m_isDead;
+    internal bool IsDeadState() => m_isDead;
 
-        internal long GetDeathTime() => m_deathTime;
+    internal long GetDeathTime() => m_deathTime;
 
-        internal bool IsDisconnected() => m_isDisconnected;
-    }
+    internal bool IsDisconnected() => m_isDisconnected;
+
+    internal void UpdateLastReceived(long currentTime) => m_lastReceivedTime = currentTime;
 }
