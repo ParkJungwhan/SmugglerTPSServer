@@ -1,5 +1,11 @@
 ﻿namespace SmugglerServer;
 
+internal enum ObjectState
+{
+    Normal = 0,
+    Dead = 1
+};
+
 internal class BaseObject
 {
     private float m_positionX;
@@ -22,6 +28,7 @@ internal class BaseObject
     private int m_hp;
 
     private int m_maxHp;
+    private ObjectState m_state;
 
     internal int GetAppearanceID() => m_appearanceId;
 
@@ -36,4 +43,29 @@ internal class BaseObject
     internal int GetMoveFlag() => m_moveFlag;
 
     internal string GetName() => m_name;
+
+    internal string SetName(string name) => m_name = name;
+
+    internal void SetAppearanceId(int id) => m_appearanceId = id;
+
+    internal void SetSequenceID(int playerSequence) => m_sequenceID = playerSequence;
+
+    internal void SetPosition(float x, float y)
+    {
+        m_positionX = x;
+        m_positionY = y;
+    }
+
+    internal void SetMoveFlag(int flag) => m_moveFlag = flag;
+
+    internal void SetDirection(int dir) => m_direction = dir;
+
+    internal void SetState(ObjectState state) => m_state = state;
+
+    internal void SetHP(int hp)
+    {
+        m_hp = hp;
+        if (m_hp < 0) m_hp = 0;
+        if (m_hp > m_maxHp) m_hp = m_maxHp;
+    }
 }

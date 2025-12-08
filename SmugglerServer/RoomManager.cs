@@ -70,7 +70,7 @@ internal class RoomManager
 
             PacketWrapper wrapper = PacketWrapper.Create(
                 Protocol.EProtocol.SC_EnterRoom,
-                builder.DataBuffer.ToFullArray(),
+                builder.DataBuffer.ToSizedArray(),
                 builder.Offset);
 
             Packet packet = new Packet();
@@ -81,7 +81,7 @@ internal class RoomManager
 
             if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
             {
-                Log.PrintLog("Fail SCEnterRoom");
+                Log.PrintLog("Fail SC_EnterRoom");
             }
 
             m_host?.Flush();
@@ -118,6 +118,19 @@ internal class RoomManager
             Log.PrintLog($"no find room : {peer.ID}", MsgLevel.Warning);
         }
         return room;
+    }
+
+    internal void RemovePlayer(Peer peer)
+    {
+        if (!m_playerRoomMap.TryGetValue(peer, out var room)) return;
+
+        PC player = room.GetPlayerByPeer(peer);
+        if (player is not null)
+        {
+            int playerSequence = player.GetSequenceID();
+            room.BroadcastRemoveNotification(playerSequence);
+        }
+        room.RemovePlayer(peer);
     }
 
     internal void SetHost(Host host)

@@ -54,6 +54,8 @@ internal class PacketHandler
             return false;
         }
 
+        //Log.PrintLog($"Received message ID: {messageId}", MsgLevel.Debug);
+
         if (!_handlers.TryGetValue(messageId, out var handler))
         {
             Log.PrintLog($"No handler registered for message ID: {messageId}", MsgLevel.Error);
@@ -67,7 +69,6 @@ internal class PacketHandler
         }
 
         ByteBuffer bb = new ByteBuffer(data);
-
         ReadOnlySpan<byte> fbData = new ReadOnlySpan<byte>(data, 4, dataSize - 4);
         return handler(peer, fbData.ToArray());
     }

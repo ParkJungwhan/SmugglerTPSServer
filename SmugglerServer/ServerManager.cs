@@ -215,7 +215,7 @@ public class ServerManager : IDisposable
             CLAuthRequest.GetRootAsCLAuthRequest,
             EProtocol.CL_AuthRequest);
 
-        // 2
+        // 2 완료
         PacketHandler.RegisterHandler<CSLoadCompleteRequest>(
             OnCSLoadCompleteRequest,
             CSLoadCompleteRequest.GetRootAsCSLoadCompleteRequest,
@@ -311,11 +311,13 @@ public class ServerManager : IDisposable
 
         if (!m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
+            Log.PrintLog("m_peerToPlayerSequence에서 못찾음");
             return false;
         }
 
         if (!ValidateSessionKey(playerSequence, request.SessionKey))
         {
+            Log.PrintLog($"ValidateSessionKey 실패 : {playerSequence} == {request.SessionKey}");
             return false;
         }
 
@@ -356,6 +358,13 @@ public class ServerManager : IDisposable
         Room room = roomManager.GetPlayerRoom(peer);
         if (room is not null)
         {
+            PC player = room.GetPlayer(playerSequence);
+            if (player is not null)
+            {
+                player.SetLoadCompleted(true);
+                Log.PrintLog($"[LoadComplete] Player {playerSequence} load completed");
+            }
+
             if (!m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
             {
                 return false;
@@ -363,7 +372,6 @@ public class ServerManager : IDisposable
 
             room.SendExsitingPlayers(peer);
 
-            PC player = room.GetPlayer(playerSequence);
             int appearenceId = player is null ? 0 : player.GetAppearanceID();
 
             room.BroadcastAddNotification(
@@ -374,7 +382,7 @@ public class ServerManager : IDisposable
                 0.0f,
                 0);
 
-            Log.PrintLog($"[RECV] SC_AddNotification broadcasted (PlayerSeq:{playerSequence}) ");
+            Log.PrintLog($"[Send] SC_AddNotification broadcasted (PlayerSeq:{playerSequence}) ");
         }
 
         Debug.WriteLine($"{DateTime.Now}\t[OnCSLoadCompleteRequest] Process Complete : {request.SessionKey}");
@@ -392,7 +400,51 @@ public class ServerManager : IDisposable
     private bool OnCSMoveNotification(Peer peer, CSMoveNotification request)
     {
         Debug.WriteLine($"{DateTime.Now}\t [OnCSMoveNotification] Process Start : {request.SessionKey}");
-        Debug.WriteLine($"{DateTime.Now}\t ================");
+
+        if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
+        {
+            Log.PrintLog("[ERROR] CS_MoveNotification - peer not found");
+            return false;
+        }
+
+        if (false == ValidateSessionKey(playerSequence, request.SessionKey))
+        {
+            Log.PrintLog($"[ERROR] CS_MoveNotification - invalid session key for player {playerSequence}");
+            return false;
+        }
+
+        Room room = roomManager.GetPlayerRoom(peer);
+        if (room is null)
+        {
+            Log.PrintLog($"[ERROR] CS_MoveNotification - room is NULL for player {playerSequence}");
+            return false;
+        }
+
+        PC player = room.GetPlayer(playerSequence);
+
+        if (player is null)
+        {
+            Log.PrintLog($"[ERROR] CS_MoveNotification - player {playerSequence} not found in room");
+            return false;
+        }
+
+        Debug.WriteLine($"{DateTime.Now}\t [OnCSMoveNotification] Process Finish : {request.SessionKey}");
+
+        MoveAction action = new MoveAction();
+        action.playerSequence = playerSequence;
+        action.playerSequence = playerSequence;
+        action.positionX = request.PositionX;
+        action.positionY = request.PositionY;
+        action.direction = request.Direction;
+        action.moveFlag = request.MoveFlag;
+        action.aimDirection = request.AimDirection;
+
+        room.QueueMoveAction(action);
+
+        var now = SteadyClock.Now();
+        long currentTime = now.TimeSinceEpochMs;
+
+        player.UpdateLastReceived(currentTime);
 
         return true;
     }
@@ -407,7 +459,7 @@ public class ServerManager : IDisposable
 
     private bool OnCSHeartbeat(Peer peer, CSHeartbeat request)
     {
-        Debug.WriteLine($"{DateTime.Now}\t [OnCSHeartbeat] Process Start : {request.SessionKey}");
+        Debug.WriteLine($"{DateTime.Now}\t[OnCSHeartbeat] Process Start : {request.SessionKey}");
 
         if (m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
         if (!ValidateSessionKey(playerSequence, request.SessionKey)) return false;
