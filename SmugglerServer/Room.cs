@@ -394,7 +394,7 @@ internal class Room
                     }
                 }
             }
-            Log.PrintLog($"[SEND] SC_SyncMove to {sentCount} player {synclist.Count} moves");
+            //Log.PrintLog($"[SEND] SC_SyncMove to {sentCount} player {synclist.Count} moves");
         }
     }
 
@@ -490,19 +490,13 @@ internal class Room
     {
         FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
-        // create remove_sequence_list
-        List<Google.FlatBuffers.Offset<int>> syncList = new();
-        Google.FlatBuffers.Offset<int> offlist = new Offset<int>();
-        offlist.Value = playerSequence;
-        syncList.Add(offlist);
-
-        // TODO : VectorOffset으로 변환에 문제가 있다. 확인 필요. 여기서 반드시 에러남
-        Debug.Assert(false, "VectorOffset으로 변환에 문제");
-        var syncListOffset = builder.CreateVectorOfTables(syncList.ToArray());
+        var offset = SCRemoveNotification.CreateRemoveSequenceListVector(
+            builder,
+            new[] { playerSequence });
 
         var removeNotification = SCRemoveNotification.CreateSCRemoveNotification(
             builder,
-             syncListOffset,
+            offset,
             EProtocol.SC_RemoveNotification);
 
         builder.Finish(removeNotification.Value);
@@ -517,7 +511,7 @@ internal class Room
             var player = pair.Value;
 
             if (player.GetSequenceID() != playerSequence &&
-                false == player.IsDisconnected() &&
+                player.IsDisconnected() == false &&
                 player.GetPeer().IsSet == true &&
                 player.IsLoadCompleted())
             {
@@ -534,7 +528,7 @@ internal class Room
 
             if (!pcpeer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
             {
-                Log.PrintLog("Fail Send Broad Remove Noti");
+                Log.PrintLog("Fail - Send Broadcast Remove Noti");
             }
         }
     }
