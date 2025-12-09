@@ -13,7 +13,6 @@ internal class PC : BaseObject
     private long m_lastReceivedTime;
     private bool m_loadComplete;
     private int m_moveFlag;
-    private bool m_loadCompleted;
     private bool m_removeSent;
     private long m_disconnectTime;
 
@@ -37,7 +36,7 @@ internal class PC : BaseObject
 
     internal void SetMoveFlag(int flag) => m_moveFlag = flag;
 
-    internal bool IsLoadCompleted() => m_loadCompleted;
+    internal bool IsLoadCompleted() => m_loadComplete;
 
     internal bool IsRemoveSent() => m_removeSent;
 

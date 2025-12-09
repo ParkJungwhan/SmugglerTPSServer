@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Numerics;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -12,13 +11,15 @@ internal class Room
 {
     private const int MAX_PLAYERS = 1000;
     private const int SYNC_PACKET_SPLIT_LIMIT_SIZE = 1400;
-    private const long DISCONNECT_TIMEOUT_MS = 10000;
+    private const long DISCONNECT_TIMEOUT_MS = 10030;//private const long DISCONNECT_TIMEOUT_MS = 10000;
     private const long CLEANUP_TIMEOUT_MS = 30000;
     private const float ATTACK_RANGE = 50.0f;
     private const float HIT_RADIUS = 1.0f;
 
     private Dictionary<int, PC> m_players = new Dictionary<int, PC>();
+    private Dictionary<int, NPC> m_npcs = new Dictionary<int, NPC>();
     private List<MoveAction> m_moveQueue = new List<MoveAction>();
+
     private List<int> m_playersToRemove = new List<int>();
 
     private Host m_host;
@@ -57,6 +58,8 @@ internal class Room
         long currentTime = start.TimeSinceEpochMs;
 
         pc.UpdateLastReceived(currentTime);
+
+        Log.PrintLog($"[Room] PC.UpdateLastReceived {pc.GetAppearanceID()}");
 
         m_players[playerSequence] = pc;
 
@@ -356,6 +359,7 @@ internal class Room
             }
         }
 
+        // Send remaining
         if (synclist.Count != 0)
         {
             var syncListOffset = builder.CreateVectorOfTables(synclist.ToArray());
@@ -394,6 +398,7 @@ internal class Room
                     }
                 }
             }
+            Debug.WriteLine($"[SEND] SC_SyncMove to {sentCount} player {synclist.Count} moves");
             //Log.PrintLog($"[SEND] SC_SyncMove to {sentCount} player {synclist.Count} moves");
         }
     }
@@ -432,6 +437,8 @@ internal class Room
         Log.PrintLog($"[Room] Sent SCChangeStateNotification to player {playerSequence} state={state}");
     }
 
+    internal int[] GetExpiredPlayers() => m_playersToRemove.ToArray();
+
     private void CleanupExpiredPlayers(long currentTime)
     {
         m_playersToRemove.Clear();
@@ -449,6 +456,11 @@ internal class Room
                 Log.PrintLog($"[Room] Player {player.GetSequenceID()} expired (30s cleanup)");
             }
         }
+
+        foreach (var pair in m_playersToRemove)
+        {
+            m_players.Remove(pair);
+        }
     }
 
     private void CheckPlayerTimeout(long currentTime)
@@ -459,7 +471,8 @@ internal class Room
             if (player.IsDisconnected()) continue;
 
             long timeSinceLastReceived = currentTime - player.GetLastReceivedTime();
-            if (timeSinceLastReceived > DISCONNECT_TIMEOUT_MS)
+            // 앞단에서 딜레이로 인해 30ms 안쪽은 제외
+            if (timeSinceLastReceived >= DISCONNECT_TIMEOUT_MS)
             {
                 player.SetDisconnected(true, currentTime);
 
@@ -531,5 +544,110 @@ internal class Room
                 Log.PrintLog("Fail - Send Broadcast Remove Noti");
             }
         }
+    }
+
+    private const float PI_VALUE = 3.14159265f;
+
+    internal AttackResult ProcessAttack(
+        int attackerSequence,
+        int attackId,
+        float posX,
+        float posY,
+        int aimDirection)
+    {
+        AttackResult result = new AttackResult();
+        result.attackerSequence = attackerSequence;
+        result.attackId = attackId;
+        result.isHit = false;
+        result.targetSequence = 0;
+        result.startX = posX;
+        result.startY = posY;
+        result.damage = 10; // 일단 기본값 10 깎는걸로 진행
+        result.targetCurrentHp = 0;
+        result.isDead = false;
+        result.deathAnimId = 0;
+
+        // Convert aim direction to radians
+        float aimRad = aimDirection * PI_VALUE / 180.0f;
+        float dirX = (float)Math.Sin(aimRad);
+        float dirY = (float)Math.Cos(aimRad);
+
+        // Default end position (miss)
+        result.endX = posX + dirX * ATTACK_RANGE;
+        result.endY = posY + dirY * ATTACK_RANGE;
+
+        float closestDistance = ATTACK_RANGE;
+        bool hitIsNPC = false;
+        BaseObject hitTarget = null;
+
+        foreach (var kvp in m_players)
+        {
+            PC target = kvp.Value;
+            if (target == null) continue;
+
+            if (target.GetSequenceID() == attackerSequence ||
+                target.IsDisconnected() ||
+                target.IsDeadState())
+                continue;
+
+            float targetX = target.GetPositionX();
+            float targetY = target.GetPositionY();
+
+            float toTagetX = targetX - posX;
+            float toTagetY = targetY - posY;
+
+            float dotProduct = toTagetX * dirX + toTagetY * dirY;
+
+            if (dotProduct < 0) continue;
+
+            // Calculate shortest distance from aim line to target
+            float projX = posX + dirX * dotProduct;
+            float projY = posY + dirY * dotProduct;
+            float distToLine = (float)Math.Sqrt(
+                (targetX - projX) * (targetX - projX) +
+                (targetY - projY) * (targetY - projY)
+            );
+
+            // Check if within hit radius and range
+            if (distToLine <= HIT_RADIUS && dotProduct <= ATTACK_RANGE)
+            {
+                // Select closest target
+                if (dotProduct < closestDistance)
+                {
+                    closestDistance = dotProduct;
+                    result.isHit = true;
+                    result.targetSequence = target.GetSequenceID();
+                    result.endX = targetX;
+                    result.endY = targetY;
+                    hitTarget = target;
+                    hitIsNPC = false;
+                }
+            }
+        }
+
+        // npc를 때릴때의 처리부분
+        //foreach (var kvp in m_npcs)
+        //{
+        //    NPC target = kvp.Value;
+
+        //    // Skip self, dead NPCs, and invincible (ReturnToSpawn) NPCs
+        //    if (target.GetSequenceID() == attackerSequence ||
+        //        target.GetFSMState() == NPCState.Dead ||
+        //        target.GetFSMState() == NPCState.ReturnToSpawn)
+        //        continue;
+        //}
+
+        // Apply damage if hit
+        if (true == result.isHit &&
+            null != hitTarget &&
+            true == hitIsNPC)
+        {
+            NPC npcTarget = hitTarget as NPC;
+            if (npcTarget is null) { return result; }
+        }
+
+        Log.PrintLog($"[Room] Attack processe - Attacker : {attackerSequence}, Hit: {result.isHit}, Target: {result.targetSequence}, HP: {result.targetCurrentHp}");
+
+        return result;
     }
 }

@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using System.Xml;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -103,23 +106,34 @@ public class ServerManager : IDisposable
             roomManager.Update(currentTimeMs);
 
             // 3.5 일정 시간 이상 딜레이 킥
-            //int[] expiredPlayers = roomManager.GetAndClearExpiredPlayers();
-            //////for (int playerSequence = 0; playerSequence < expiredPlayers)
-            //for (int i = 0; i < expiredPlayers.Length; i++)
-            //{
-            //    var playerSequence = expiredPlayers[i];
-            //    // 확인해서 끊기
-            //}
+            var expiredPlayers = roomManager.GetAndClearExpiredPlayers();
+            if (expiredPlayers.Length > 0)
+            {
+                Log.PrintLog($"[ServerManager] removing session key for expired player count : {expiredPlayers.Length}");
+                for (int i = 0; i < expiredPlayers.Length; i++)
+                {
+                    var playerSequence = expiredPlayers[i];
+                    m_playerSequenceToSessionKey.Remove(playerSequence);
+                    if (m_playerSequenceToDeviceKey.TryGetValue(playerSequence, out string playerseq))
+                    {
+                        m_deviceKeyToPlayerSequence.Remove(playerseq);
+                        m_playerSequenceToDeviceKey.Remove(playerSequence);
+                    }
+                    m_playerSequenceToUserName.Remove(playerSequence);
+                    m_playerSequenceToRoomCode.Remove(playerSequence);
+                }
+            }
 
             // 4. 프레임 레이트 유지(min :30fps)
-            var frameEnd = SteadyClock.Now();
-            long elapsed = SteadyTimePoint.DiffMilliseconds(frameEnd, frameStart);
+            //var frameEnd = SteadyClock.Now();
+            //long elapsed = SteadyTimePoint.DiffMilliseconds(frameEnd, frameStart);
 
-            int sleepTime = (int)Math.Max(0, FRAME_TIME_MS - elapsed);
-            if (sleepTime > 0)
-            {
-                Thread.Sleep(sleepTime);
-            }
+            //int sleepTime = (int)Math.Max(0, FRAME_TIME_MS - elapsed);
+            //if (sleepTime > 0)
+            //{
+            //    Thread.Sleep(sleepTime);
+            //}
+            Thread.Sleep(1);
         }
 
         server!.Flush();
@@ -161,11 +175,6 @@ public class ServerManager : IDisposable
                         netEvent.Packet.CopyTo(packet.data);
 
                         Debug.WriteLine($"[Recv Packet] Length : {packet.data.Length}, Protocol :{(EProtocol)((int)packet.data[0])} ");
-
-                        //byte[] buffer = new byte[netEvent.Packet.Length];
-                        //netEvent.Packet.CopyTo(buffer);
-
-                        //Buffer.BlockCopy(buffer, 0, packet.data, 0, netEvent.Packet.Length);
 
                         lock (m_lock)
                         {
@@ -221,7 +230,7 @@ public class ServerManager : IDisposable
             CSLoadCompleteRequest.GetRootAsCSLoadCompleteRequest,
             EProtocol.CS_LoadCompleteRequest);
 
-        // 3
+        // 3 move noti
         PacketHandler.RegisterHandler<CSMoveNotification>(
             OnCSMoveNotification,
             CSMoveNotification.GetRootAsCSMoveNotification,
@@ -421,7 +430,6 @@ public class ServerManager : IDisposable
         }
 
         PC player = room.GetPlayer(playerSequence);
-
         if (player is null)
         {
             Log.PrintLog($"[ERROR] CS_MoveNotification - player {playerSequence} not found in room");
@@ -445,6 +453,7 @@ public class ServerManager : IDisposable
         long currentTime = now.TimeSinceEpochMs;
 
         player.UpdateLastReceived(currentTime);
+        Log.PrintLog($"[ServerManager] PC.UpdateLastReceived {player.GetAppearanceID()}");
 
         return true;
     }
@@ -452,8 +461,24 @@ public class ServerManager : IDisposable
     private bool OnCSAttackRequest(Peer peer, CSAttackRequest request)
     {
         Debug.WriteLine($"{DateTime.Now}\t [OnCSAttackRequest] Process Start : {request.SessionKey}");
-        Debug.WriteLine($"{DateTime.Now}\t ================");
 
+        if (m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
+        if (ValidateSessionKey(playerSequence, request.SessionKey)) return false;
+
+        Log.PrintLog($"[RECV] CS_ATTACKRequest (Seq: {playerSequence}, AttackID : {request.AttackId}, Pos: {request.PositionX},{request.PositionY}, Aim: {request.AimDirection})");
+
+        Room room = roomManager.GetPlayerRoom(peer);
+        if (room is not null)
+        {
+            AttackResult result = room.ProcessAttack(
+                playerSequence,
+                request.AttackId,
+                request.PositionX,
+                request.PositionY,
+                request.AimDirection);
+        }
+
+        Debug.WriteLine($"{DateTime.Now}\t [OnCSAttackRequest] Process Complete : {request.SessionKey}");
         return true;
     }
 
@@ -474,6 +499,7 @@ public class ServerManager : IDisposable
             if (player is not null)
             {
                 player.UpdateLastReceived(currentTime);
+                Log.PrintLog($"[ServerManager.HeartBeat] PC.UpdateLastReceived {player.GetAppearanceID()}");
 
                 Debug.WriteLine($"{DateTime.Now}\tOnCSHeartbeat : {request.SessionKey}");
             }

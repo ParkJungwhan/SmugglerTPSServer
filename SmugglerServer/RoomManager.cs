@@ -108,7 +108,18 @@ internal class RoomManager
 
     internal int[] GetAndClearExpiredPlayers()
     {
-        return new int[] { };
+        List<int> allExpired = new List<int>();
+
+        foreach (var room in m_rooms)
+        {
+            if (room is not null)
+            {
+                var expiredPlayers = room.GetExpiredPlayers();
+                allExpired.AddRange(expiredPlayers);
+            }
+        }
+
+        return allExpired.ToArray();
     }
 
     internal Room GetPlayerRoom(Peer peer)
@@ -140,13 +151,32 @@ internal class RoomManager
 
     internal void Update(long currentTime)
     {
+        m_rooms.ForEach(x => x.Update(currentTime));
+
+        // room cleanup
+        List<Room> roomToRemove = new(m_rooms.Count);
+
         foreach (var room in m_rooms)
         {
-            if (room is not null && !room.IsEmpty())
+            if (room is not null && room.IsEmpty())
             {
-                //room->Update(currentTime);
-                room.Update(currentTime);
+                roomToRemove.Add(room);
             }
         }
+
+        // 위에서 저정한 room을 clean
+        foreach (var room in roomToRemove)
+        {
+            // remove room
+            m_rooms.Remove(room);
+
+            if (m_currentRoom is not null && m_currentRoom.GetRoomCode() == room.GetRoomCode())
+            {
+                Log.PrintLog("[RoomManager] Clearing m_currentRoom (room deleted)");
+                m_currentRoom = null;
+            }
+        }
+
+        m_rooms.RemoveAll(x => x.IsEmpty());
     }
 }

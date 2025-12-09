@@ -22,7 +22,7 @@
                     _ => ConsoleColor.White,
                 };
             }
-            Console.WriteLine($"{DateTime.Now}\t{msg}");
+            Console.WriteLine($"{DateTime.Now}\t {msg}");
             Console.ResetColor();
         }
     }
