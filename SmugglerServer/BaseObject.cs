@@ -8,25 +8,17 @@ internal enum ObjectState
 
 internal class BaseObject
 {
+    // Object Type (1=Player, 2=NPC, 3=block...)
+    private int m_objectType;
+
     private float m_positionX;
     private float m_positionY;
     private int m_direction;
-
-    private int m_sequenceID;              // object_sequence (player_sequence)
+    private int m_sequenceID;           // object_sequence (player_sequence)
     private string m_name;
-
-    // Object Type (1=Player, 2=NPC)
-    private int m_objectType;
-
-    // Appearance
-    private int m_appearanceId;
-
-    // State
-    private int m_moveFlag;
-
-    // HP
-    private int m_hp;
-
+    private int m_appearanceId;         // Appearance
+    private int m_moveFlag;             // State
+    private int m_hp;                   // HP
     private int m_maxHp;
     private ObjectState m_state;
 
@@ -62,10 +54,21 @@ internal class BaseObject
 
     internal void SetState(ObjectState state) => m_state = state;
 
+    internal ObjectState GetState() => m_state;
+
     internal void SetHP(int hp)
     {
         m_hp = hp;
         if (m_hp < 0) m_hp = 0;
         if (m_hp > m_maxHp) m_hp = m_maxHp;
     }
+
+    internal void SetMaxHP(int maxHp) => m_maxHp = maxHp < 1 ? 1 : maxHp;
+
+    internal void SetObjectType(int type) => m_objectType = type;
+
+    internal int GetObjectType() => m_objectType;
+
+    internal virtual void Update(float deltaTime)
+    { }
 }

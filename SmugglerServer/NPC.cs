@@ -14,5 +14,10 @@ internal class NPC : BaseObject
 {
     private NPCState m_fsmState;
 
+    public NPC()
+    {
+        SetObjectType(2);
+    }
+
     internal NPCState GetFSMState() => m_fsmState;
 }

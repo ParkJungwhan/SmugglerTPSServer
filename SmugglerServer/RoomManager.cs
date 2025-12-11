@@ -66,12 +66,11 @@ internal class RoomManager
                 startX,
                 startY,
                 Protocol.EProtocol.SC_EnterRoom);
-            builder.Finish(enterRoom.Value);
+            builder.Finish(enterRoom);
 
             PacketWrapper wrapper = PacketWrapper.Create(
                 Protocol.EProtocol.SC_EnterRoom,
-                builder.DataBuffer.ToSizedArray(),
-                builder.Offset);
+                builder);
 
             Packet packet = new Packet();
             packet.Create(
@@ -172,7 +171,7 @@ internal class RoomManager
 
             if (m_currentRoom is not null && m_currentRoom.GetRoomCode() == room.GetRoomCode())
             {
-                Log.PrintLog("[RoomManager] Clearing m_currentRoom (room deleted)");
+                Log.PrintLog($"[RoomManager] Clearing {m_currentRoom.GetRoomCode()} Room (Deleted)", MsgLevel.Information);
                 m_currentRoom = null;
             }
         }

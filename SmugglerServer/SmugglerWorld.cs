@@ -7,15 +7,20 @@ public class SmugglerWorld
 {
     public static void Main(string[] args)
     {
+        Log.PrintLog("Hello World");
+
         ThreadPool.GetAvailableThreads(out var count, out var iocount);
         Log.PrintLog($"Start - Available ThreadPool Threads: Worker={count}, IO={iocount}");
-
-        Console.WriteLine($"{DateTime.Now}\tHello World");
 
         ////////////////////////////////////////////////////////////////
         ushort port = NetConstants.DefaultPort;
 
         ServerManager server = new ServerManager();
+
+        AppDomain.CurrentDomain.ProcessExit += (sender, args) =>
+        {
+            server?.Stop();
+        };
 
         try
         {

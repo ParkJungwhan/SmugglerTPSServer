@@ -13,16 +13,36 @@ internal class PacketHandler
     private readonly Dictionary<int, HandlerFunc> _handlers = new();
 
     public void RegisterHandler<TMessage>(
-    Func<Peer, TMessage, bool> handler,               // 실제 비즈니스 로직
-    //Func<ByteBuffer, bool> verifyBuffer,                  // 예: LoginRequest.VerifyLoginRequest
-    Func<ByteBuffer, TMessage> getRoot,                   // 예: LoginRequest.GetRootAsLoginRequest
-    EProtocol messageId)
+        Func<Peer, TMessage, bool> handler,               // 실제 비즈니스 로직
+                                                          // Func<ByteBuffer, bool> verifyBuffer,                  // 예: LoginRequest.VerifyLoginRequest
+        Func<ByteBuffer, TMessage> getRoot,                   // 예: LoginRequest.GetRootAsLoginRequest
+        EProtocol messageId)
     {
         bool Invoker(Peer peer, byte[] bb)
         {
             // 1) FlatBuffer 검증
             //if (!verifyBuffer(bb))
             //    return false;
+
+            // bb: byte[] 형태
+            // fbDataOffset: 보통 4
+            //Verifier verifier = new Verifier(new ByteBuffer(bb,4));
+            //Verifier verifier = new Verifier(new ByteBuffer(bb));
+            //Verifier verifier = new Verifier();
+            //verifier.VerifyBuffer(typeof(TMessage).Name, bb.Length, )
+
+            //Verifier verifier = new Verifier(new ByteBuffer(bb, 4));
+            //if (CLAuthRequestVerify.Verify(verifier, 0))
+            //{
+            //    return false;
+            //}
+
+            //if (!MessageType.VerifyMessageType(bbs))
+            //{
+            //    return false;
+            //}
+
+            // CLAuthRequest.GetRootAsCLAuthRequest
 
             // 2) 루트 객체 읽기
             var msg = getRoot(new ByteBuffer(bb));
@@ -53,8 +73,6 @@ internal class PacketHandler
             Log.PrintLog("Failed to extract message ID", MsgLevel.Error);
             return false;
         }
-
-        //Log.PrintLog($"Received message ID: {messageId}", MsgLevel.Debug);
 
         if (!_handlers.TryGetValue(messageId, out var handler))
         {

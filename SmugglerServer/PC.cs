@@ -11,10 +11,16 @@ internal class PC : BaseObject
     private int m_deathAnimId;
     private bool m_isDisconnected;
     private long m_lastReceivedTime;
-    private bool m_loadComplete;
+    private bool m_loadCompleted;
     private int m_moveFlag;
     private bool m_removeSent;
     private long m_disconnectTime;
+
+    public PC()
+    {
+        // PC는 object_type = 1
+        SetObjectType(1);
+    }
 
     internal void SetPeer(Peer peer) => m_peer = peer;
 
@@ -32,11 +38,9 @@ internal class PC : BaseObject
 
     internal void UpdateLastReceived(long currentTime) => m_lastReceivedTime = currentTime;
 
-    internal void SetLoadCompleted(bool completed) => m_loadComplete = completed;
+    internal void SetLoadCompleted(bool completed) => m_loadCompleted = completed;
 
-    internal void SetMoveFlag(int flag) => m_moveFlag = flag;
-
-    internal bool IsLoadCompleted() => m_loadComplete;
+    internal bool IsLoadCompleted() => m_loadCompleted;
 
     internal bool IsRemoveSent() => m_removeSent;
 

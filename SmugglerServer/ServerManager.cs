@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Xml;
+﻿using System.Diagnostics;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -17,7 +14,6 @@ public class ServerManager : IDisposable
 {
     private Host server;
     private Address address;
-    private bool m_isConnected = false;
 
     private Dictionary<int, int> m_playerSequenceToSessionKey = new Dictionary<int, int>();
     private Dictionary<int, string> m_playerSequenceToDeviceKey = new Dictionary<int, string>();
@@ -31,21 +27,16 @@ public class ServerManager : IDisposable
 
     private PacketHandler PacketHandler = new PacketHandler();
 
-    private int m_nextSessionKey = 10000;
-    private int m_nextPlayerSequence = 1000;
+    private int m_nextSessionKey;
+    private int m_nextPlayerSequence;
 
-    private object m_lock = new object();
+    private object m_lock = new object();   // only lock to input stream packet
 
     public struct ReceivedPacket
     {
         public Peer peer;
         public byte[] data;
     };
-
-    public bool IsConnected
-    {
-        get { return m_isConnected; }
-    }
 
     public ServerManager()
     {
@@ -55,8 +46,11 @@ public class ServerManager : IDisposable
             throw new Exception("Failed to initialize ENet library");
         }
 
-        uint time = Library.Time;
-        Log.PrintLog($"ENet Library.Time : {time}");
+        m_nextSessionKey = 10000;
+        m_nextPlayerSequence = 1000;
+
+        Log.PrintLog($"ENet Library.Time: \t{Library.Time}", MsgLevel.Information);
+        Log.PrintLog($"SteadyClock.Time: \t{SteadyClock.Now().Timestamp}", MsgLevel.Information);
     }
 
     public bool Initialize(string ip, ushort port)
@@ -88,61 +82,84 @@ public class ServerManager : IDisposable
     {
         const int TARGET_FPS = 30;
         const long FRAME_TIME_MS = 1000 / TARGET_FPS;  // 33ms
+        const int POLL_INTERVAL_MS = 1;  // 1ms polling for low latency
 
         Debug.Assert(server != null);
 
+        TimeUtil.TimeBeginPeriod(POLL_INTERVAL_MS);
+        Log.PrintLog("Server is running at 30fps with 1ms polling. Press Ctrl+C to stop.");
+
+        var lastFrameTime = SteadyClock.Now();
+
         while (!cancelToken.IsCancellationRequested)
         {
-            var frameStart = SteadyClock.Now();
-            long currentTimeMs = frameStart.TimeSinceEpochMs;
+            var now = SteadyClock.Now();
+            long currentTimeMs = Library.Time;
 
             // 1. 소켓에서 패킷 수신 → 큐에 저장
             PollNetworkEvents();
 
-            // 2. 큐의 패킷들을 처리
-            ProcessPacketQueue();
-
-            // 3. Room Update → Move 브로드캐스트
-            roomManager.Update(currentTimeMs);
-
-            // 3.5 일정 시간 이상 딜레이 킥
-            var expiredPlayers = roomManager.GetAndClearExpiredPlayers();
-            if (expiredPlayers.Length > 0)
+            // 패킷을 받아서 처리하는 주기는 FRAME_TIME_MS(33)로 진행
+            var elapsedSinceFrame = SteadyTimePoint.DiffMilliseconds(now, lastFrameTime);
+            if (elapsedSinceFrame >= FRAME_TIME_MS)
             {
-                Log.PrintLog($"[ServerManager] removing session key for expired player count : {expiredPlayers.Length}");
-                for (int i = 0; i < expiredPlayers.Length; i++)
+                // 33ms 마다 아래의 게임 로직들을 일괄 처리
+                lastFrameTime = now;
+
+                // 큐의 패킷들을 처리
+                ProcessPacketQueue();
+
+                // Room Update → Move 브로드캐스트
+                roomManager.Update(currentTimeMs);
+
+                // 일정 시간 이상 딜레이 킥
+                var expiredPlayers = roomManager.GetAndClearExpiredPlayers();
+                if (expiredPlayers.Length > 0)
                 {
-                    var playerSequence = expiredPlayers[i];
-                    m_playerSequenceToSessionKey.Remove(playerSequence);
-                    if (m_playerSequenceToDeviceKey.TryGetValue(playerSequence, out string playerseq))
+                    Log.PrintLog($"[ServerManager] removing session key for expired player count : {expiredPlayers.Length}");
+                    for (int i = 0; i < expiredPlayers.Length; i++)
                     {
-                        m_deviceKeyToPlayerSequence.Remove(playerseq);
-                        m_playerSequenceToDeviceKey.Remove(playerSequence);
+                        var playerSequence = expiredPlayers[i];
+                        m_playerSequenceToSessionKey.Remove(playerSequence);
+                        if (m_playerSequenceToDeviceKey.TryGetValue(playerSequence, out string playerseq))
+                        {
+                            m_deviceKeyToPlayerSequence.Remove(playerseq);
+                            m_playerSequenceToDeviceKey.Remove(playerSequence);
+                        }
+                        m_playerSequenceToUserName.Remove(playerSequence);
+                        m_playerSequenceToRoomCode.Remove(playerSequence);
                     }
-                    m_playerSequenceToUserName.Remove(playerSequence);
-                    m_playerSequenceToRoomCode.Remove(playerSequence);
                 }
+
+                // 1ms 대기 (CPU 부하 감소)
+                Thread.Sleep(1);
             }
-
-            // 4. 프레임 레이트 유지(min :30fps)
-            //var frameEnd = SteadyClock.Now();
-            //long elapsed = SteadyTimePoint.DiffMilliseconds(frameEnd, frameStart);
-
-            //int sleepTime = (int)Math.Max(0, FRAME_TIME_MS - elapsed);
-            //if (sleepTime > 0)
-            //{
-            //    Thread.Sleep(sleepTime);
-            //}
-            Thread.Sleep(1);
         }
+
+        TimeUtil.TimeEndPeriod(POLL_INTERVAL_MS); // 종료시에는 이걸로 진행
+
+        Stop();
+    }
+
+    public void Stop()
+    {
+        ReleaseMemory();
 
         server!.Flush();
         server.Dispose();
         Library.Deinitialize();
     }
 
-    public void Stop()
+    public void ReleaseMemory()
     {
+        m_playerSequenceToSessionKey?.Clear();
+        m_playerSequenceToSessionKey?.Clear();
+        m_playerSequenceToDeviceKey?.Clear();
+        m_playerSequenceToUserName?.Clear();
+        m_playerSequenceToRoomCode?.Clear();
+        m_deviceKeyToPlayerSequence?.Clear();
+        m_peerToPlayerSequence?.Clear();
+        ReceiveQueue?.Clear();
     }
 
     internal void PollNetworkEvents()
@@ -155,12 +172,12 @@ public class ServerManager : IDisposable
             {
                 case EventType.Connect:
                     HandleConnect(netEvent);
-                    // 연결 처리라서 따로 처리 안함. 이후 패킷인 인증 등은 receive 쪽에서 처리
+                    // 연결 처리라서 따로 처리 안함. 이후 패킷인증 등은 receive 쪽에서 처리
                     break;
 
                 case EventType.Receive:
                     {
-                        // CS_Ping은 즉시 처리 (RTT 측정 정확도), 로컬에서는 평균 0에서 10이하로 나와야 한다.
+                        // CS_Ping은 즉시 처리 (RTT 측정 정확도)
                         // 이외 모든 패킷은 큐에서 돌린다
                         if (TryHandlePingImmediate(netEvent.Peer, netEvent.Packet))
                         {
@@ -218,13 +235,13 @@ public class ServerManager : IDisposable
         // PING 부분에서 패킷 정상 처리 및 변환까지 처리하는 부분 확인됨
         // PacketHandler.RegisterHandler<CSPing>(PingPong, GetPingCheck, (int)EProtocol.CS_Ping); // 삭제 - 위에서 우선처리
 
-        // 1 완료
+        // 1 인증. (지금은 단순처리)
         PacketHandler.RegisterHandler<CLAuthRequest>(
             OnCLAuthRequest,
             CLAuthRequest.GetRootAsCLAuthRequest,
             EProtocol.CL_AuthRequest);
 
-        // 2 완료
+        // 2 완료 (로딩 다 됐다고 클라가 알리면 그때부터 동기화 진행)
         PacketHandler.RegisterHandler<CSLoadCompleteRequest>(
             OnCSLoadCompleteRequest,
             CSLoadCompleteRequest.GetRootAsCSLoadCompleteRequest,
@@ -236,13 +253,13 @@ public class ServerManager : IDisposable
             CSMoveNotification.GetRootAsCSMoveNotification,
             EProtocol.CS_MoveNotification);
 
-        // 3
+        // 4 heartbeat(주기적)
         PacketHandler.RegisterHandler<CSHeartbeat>(
             OnCSHeartbeat,
             CSHeartbeat.GetRootAsCSHeartbeat,
             EProtocol.CS_Heartbeat);
 
-        // 4
+        // 5 attack
         PacketHandler.RegisterHandler<CSAttackRequest>(
             OnCSAttackRequest,
             CSAttackRequest.GetRootAsCSAttackRequest,
@@ -254,22 +271,18 @@ public class ServerManager : IDisposable
         long clientTick = msg.ClientTick;
         long serverTick = TimeUtil.GetSystemTimeInMilliseconds();
 
-        FlatBufferBuilder builder = new FlatBufferBuilder(128);
+        FlatBufferBuilder builder = new FlatBufferBuilder(256);
 
         builder.Finish(
             SCPong.CreateSCPong(
                 builder,
                 clientTick,
                 serverTick,
-                EProtocol.SC_Pong)
-            .Value);
-
-        server.Flush();
+                EProtocol.SC_Pong));
 
         var wrapper = PacketWrapper.Create(
             EProtocol.SC_Pong,
-            builder.DataBuffer.ToSizedArray(),
-            builder.Offset);
+            builder);
 
         Packet packet = new Packet();
         packet.Create(
@@ -279,7 +292,7 @@ public class ServerManager : IDisposable
 
         if (!peer.Send(UDPConn.CHANNEL_UNRELIABLE, ref packet))
         {
-            Log.PrintLog("Fail Send Pong");
+            Log.PrintLog("Fail Send Pong", MsgLevel.Warning);
         }
 
         server.Flush();
@@ -318,35 +331,35 @@ public class ServerManager : IDisposable
     {
         Debug.WriteLine($"{DateTime.Now}\t[OnCSLoadCompleteRequest] Process Start : {request.SessionKey}");
 
-        if (!m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
+        if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
-            Log.PrintLog("m_peerToPlayerSequence에서 못찾음");
+            Log.PrintLog("[ServerManager] No find in m_peerToPlayerSequence", MsgLevel.Warning);
             return false;
         }
 
-        if (!ValidateSessionKey(playerSequence, request.SessionKey))
+        if (false == ValidateSessionKey(playerSequence, request.SessionKey))
         {
-            Log.PrintLog($"ValidateSessionKey 실패 : {playerSequence} == {request.SessionKey}");
+            Log.PrintLog($"ValidateSessionKey fail : {playerSequence} == {request.SessionKey}", MsgLevel.Warning);
             return false;
         }
 
-        Log.PrintLog($"[RECV] CS_LoadCompleteRequest (PlayerSeq:{playerSequence}) ");
+        Log.PrintLog($"[RECV] CS_LoadCompleteRequest (Seq:{playerSequence})");
 
         // 1 패킷 lodacomplete 전달
         // 2 룸 매니저에 플레이어 로드 완료 알림
 
         // SC_LoadCompleteResponse 패킷 만들기
-        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+        FlatBufferBuilder builder = new FlatBufferBuilder(256);
 
-        builder.Finish(SCLoadCompleteResponse.CreateSCLoadCompleteResponse(
-            builder,
-            request.SessionKey,
-            EProtocol.SC_LoadCompleteResponse).Value);
+        builder.Finish(
+            SCLoadCompleteResponse.CreateSCLoadCompleteResponse(
+                builder,
+                request.SessionKey,
+                EProtocol.SC_LoadCompleteResponse));
 
         var wrapper = PacketWrapper.Create(
             EProtocol.SC_LoadCompleteResponse,
-            builder.DataBuffer.ToSizedArray(),
-            builder.Offset);
+            builder);
 
         Packet packet = new Packet();
         packet.Create(
@@ -374,10 +387,11 @@ public class ServerManager : IDisposable
                 Log.PrintLog($"[LoadComplete] Player {playerSequence} load completed");
             }
 
-            if (!m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
+            if (false == m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
             {
                 return false;
             }
+            Debug.Assert(false == string.IsNullOrEmpty(userName));
 
             room.SendExsitingPlayers(peer);
 
@@ -391,9 +405,10 @@ public class ServerManager : IDisposable
                 0.0f,
                 0);
 
-            Log.PrintLog($"[Send] SC_AddNotification broadcasted (PlayerSeq:{playerSequence}) ");
+            Log.PrintLog($"[Send] SC_AddNotification broadcasted (Seq: {playerSequence}) ");
         }
 
+        Debug.Assert(room is not null);
         Debug.WriteLine($"{DateTime.Now}\t[OnCSLoadCompleteRequest] Process Complete : {request.SessionKey}");
 
         return true;
@@ -449,11 +464,9 @@ public class ServerManager : IDisposable
 
         room.QueueMoveAction(action);
 
-        var now = SteadyClock.Now();
-        long currentTime = now.TimeSinceEpochMs;
+        long currentTime = Library.Time;
 
         player.UpdateLastReceived(currentTime);
-        Log.PrintLog($"[ServerManager] PC.UpdateLastReceived {player.GetAppearanceID()}");
 
         return true;
     }
@@ -486,11 +499,10 @@ public class ServerManager : IDisposable
     {
         Debug.WriteLine($"{DateTime.Now}\t[OnCSHeartbeat] Process Start : {request.SessionKey}");
 
-        if (m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
-        if (!ValidateSessionKey(playerSequence, request.SessionKey)) return false;
+        if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
+        if (false == ValidateSessionKey(playerSequence, request.SessionKey)) return false;
 
-        var now = SteadyClock.Now();
-        long currentTime = now.TimeSinceEpochMs;
+        long currentTime = Library.Time;
 
         Room room = roomManager.GetPlayerRoom(peer);
         if (room is not null)
@@ -499,8 +511,6 @@ public class ServerManager : IDisposable
             if (player is not null)
             {
                 player.UpdateLastReceived(currentTime);
-                Log.PrintLog($"[ServerManager.HeartBeat] PC.UpdateLastReceived {player.GetAppearanceID()}");
-
                 Debug.WriteLine($"{DateTime.Now}\tOnCSHeartbeat : {request.SessionKey}");
             }
         }
@@ -513,17 +523,16 @@ public class ServerManager : IDisposable
     {
         FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
-        builder.Finish(LCAuthResponse.CreateLCAuthResponse(
-            builder,
-            sessionKey,
-            playerSequence,
-            EProtocol.LC_AuthResponse
-        ).Value);
+        builder.Finish(
+            LCAuthResponse.CreateLCAuthResponse(
+                builder,
+                sessionKey,
+                playerSequence,
+                EProtocol.LC_AuthResponse));
 
         var wrapper = PacketWrapper.Create(
             EProtocol.LC_AuthResponse,
-            builder.DataBuffer.ToSizedArray(),
-            builder.Offset);
+            builder);
 
         Packet packet = new Packet();
         packet.Create(
