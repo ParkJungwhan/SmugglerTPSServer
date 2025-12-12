@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net.Sockets;
+using System.Reflection.Emit;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -877,7 +878,7 @@ internal class Room
         return result;
     }
 
-    internal void BroadcastAttackNotification(AttackResult result)
+    internal void BroadcastAttackResult(AttackResult result)
     {
         FlatBufferBuilder builder = new FlatBufferBuilder(1024);
         var syncAttack = SCSyncAttack.CreateSCSyncAttack(builder,
@@ -898,10 +899,10 @@ internal class Room
         builder.Finish(syncAttack);
 
         PacketWrapper wrapper = PacketWrapper.Create(EProtocol.SC_SyncAttack, builder);
-        SendAllUserInRoom(wrapper, EProtocol.SC_SyncAttack);
+        SendAllUserInRoomRELIABLE(wrapper, EProtocol.SC_SyncAttack);
     }
 
-    private void SendAllUserInRoom(PacketWrapper wrapper, EProtocol protocol)
+    private void SendAllUserInRoomRELIABLE(PacketWrapper wrapper, EProtocol protocol)
     {
         // 전체 유저에게 전송
 
@@ -928,5 +929,35 @@ internal class Room
             }
         }
         Log.PrintLog($"[SEND] broadcast to all user in Room('{m_roomCode}') : {protocol.ToString()}");
+    }
+
+    internal bool BroadcastChat(int playerSequence, string? playerName, string msg, float posX, float posY)
+    {
+        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+
+        var name = builder.CreateString(playerName);
+        var message = builder.CreateString(msg);
+
+        var syncChat = SCSyncChat.CreateSCSyncChat(builder,
+            playerSequence,
+            name,
+            message,
+            posX,
+            posY,
+            EProtocol.SC_SyncChat);
+
+        builder.Finish(syncChat);
+
+        PacketWrapper wrapper = PacketWrapper.Create(
+            EProtocol.SC_SyncChat,
+            builder);
+
+        Log.PrintLog($"[Room] broadcastChat - Total players in room: {m_players.Count}");
+
+        SendAllUserInRoomRELIABLE(wrapper, EProtocol.SC_SyncChat);
+
+        m_host.Flush();
+
+        return true;
     }
 }

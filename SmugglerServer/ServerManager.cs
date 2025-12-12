@@ -265,6 +265,57 @@ public class ServerManager : IDisposable
             OnCSAttackRequest,
             CSAttackRequest.GetRootAsCSAttackRequest,
             EProtocol.CS_AttackRequest);
+
+        // 6 chat
+        PacketHandler.RegisterHandler<CSChatRequest>(
+            OnCSChatRequest,
+            CSChatRequest.GetRootAsCSChatRequest,
+            EProtocol.CS_ChatRequest);
+    }
+
+    private bool OnCSChatRequest(Peer peer, CSChatRequest request)
+    {
+        // 채팅 받으면 전체로 다 쏘기
+        //Log.PrintLog($"[Chat] Player:{request.SessionKey}, Msg: {request.Message}");
+
+        if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
+        {
+            Log.PrintLog("[Chat] Player not found for peer", MsgLevel.Warning);
+            return false;
+        }
+
+        if (false == ValidateSessionKey(playerSequence, request.SessionKey))
+        {
+            Log.PrintLog("[Chat] Player not found for peer", MsgLevel.Warning);
+            return false;
+        }
+
+        Room room = roomManager.GetPlayerRoom(peer);
+        if (room is null)
+        {
+            Log.PrintLog("[Chat] Not found room");
+            return false;
+        }
+
+        string playerName = "Unknown";
+        if (false == m_playerSequenceToUserName.TryGetValue(playerSequence, out playerName))
+        {
+            Log.PrintLog("[Chat] Not found room");
+        }
+
+        PC player = room.GetPlayer(playerSequence);
+        if (player is null)
+        {
+            Log.PrintLog($"[Chat] Player not found in room");
+            return false;
+        }
+
+        float posX = player.GetPositionX();
+        float posY = player.GetPositionY();
+
+        string msg = string.IsNullOrEmpty(request.Message) ? string.Empty : request.Message;
+
+        return room.BroadcastChat(playerSequence, playerName, msg, posX, posY);
     }
 
     private bool PingPong(Peer peer, CSPing msg)
@@ -493,7 +544,7 @@ public class ServerManager : IDisposable
                 request.PositionY,
                 request.AimDirection);
 
-            room.BroadcastAttackNotification(result);
+            room.BroadcastAttackResult(result);
 
             Log.PrintLog($"[SEND] SC_ATTACK broadcasted (Hit: {result.isHit})");
         }
