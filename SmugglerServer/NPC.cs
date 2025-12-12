@@ -17,6 +17,8 @@ internal class NPC : BaseObject
     public NPC()
     {
         SetObjectType(2);
+
+        m_fsmState = NPCState.Idle;
     }
 
     internal NPCState GetFSMState() => m_fsmState;

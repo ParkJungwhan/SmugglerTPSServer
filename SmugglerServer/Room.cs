@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Net.Sockets;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -633,7 +634,7 @@ internal class Room
 
     private void SendChangeStateNotification(int playerSequence, int state, float posX, float posY)
     {
-        if (!m_players.TryGetValue(playerSequence, out PC player)) return;
+        if (false == m_players.TryGetValue(playerSequence, out PC player)) return;
         if (player.IsDisconnected() || player.GetPeer().NativeData == IntPtr.Zero) return;
 
         FlatBufferBuilder builder = new FlatBufferBuilder(1024);
@@ -871,8 +872,61 @@ internal class Room
             if (npcTarget is null) { return result; }
         }
 
-        Log.PrintLog($"[Room] Attack processe - Attacker : {attackerSequence}, Hit: {result.isHit}, Target: {result.targetSequence}, HP: {result.targetCurrentHp}");
+        Log.PrintLog($"[Room] Attack proccese - Attacker : {attackerSequence}, Hit: {result.isHit}, Target: {result.targetSequence}, HP: {result.targetCurrentHp}");
 
         return result;
+    }
+
+    internal void BroadcastAttackNotification(AttackResult result)
+    {
+        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
+        var syncAttack = SCSyncAttack.CreateSCSyncAttack(builder,
+            result.attackerSequence,
+            result.attackId,
+            result.isHit,
+            result.targetSequence,
+            result.startX,
+            result.startY,
+            result.endX,
+            result.endY,
+            result.damage,
+            result.targetCurrentHp,
+            result.isDead,
+            result.deathAnimId,
+            EProtocol.SC_SyncAttack);
+
+        builder.Finish(syncAttack);
+
+        PacketWrapper wrapper = PacketWrapper.Create(EProtocol.SC_SyncAttack, builder);
+        SendAllUserInRoom(wrapper, EProtocol.SC_SyncAttack);
+    }
+
+    private void SendAllUserInRoom(PacketWrapper wrapper, EProtocol protocol)
+    {
+        // 전체 유저에게 전송
+
+        int sentCount = 0;
+        foreach (var pair in m_players)
+        {
+            var player = pair.Value;
+            if (!player.IsDisconnected() &&
+                player.GetPeer().NativeData != IntPtr.Zero &&
+                player.IsLoadCompleted())
+            {
+                Packet packet = new Packet();
+                packet.Create(
+                    wrapper.GetRawData(),
+                    wrapper.GetRawSize(),
+                    PacketFlags.Reliable);
+
+                if (false == player.GetPeer().Send(UDPConn.CHANNEL_RELIABLE, ref packet))
+                {
+                    Log.PrintLog($"[Room] Fail Send user in Room {player.GetAppearanceID()}", MsgLevel.Warning);
+                }
+                else
+                    sentCount++;
+            }
+        }
+        Log.PrintLog($"[SEND] broadcast to all user in Room('{m_roomCode}') : {protocol.ToString()}");
     }
 }

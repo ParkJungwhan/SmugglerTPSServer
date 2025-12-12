@@ -46,6 +46,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Generated\" />
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="flatc --csharp -o Generated ..\Client\Protocol\protocol.fbs" />
   </Target>

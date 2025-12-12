@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.ComponentModel.Design.Serialization;
+using System.Diagnostics;
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
@@ -423,8 +424,6 @@ public class ServerManager : IDisposable
 
     private bool OnCSMoveNotification(Peer peer, CSMoveNotification request)
     {
-        Debug.WriteLine($"{DateTime.Now}\t [OnCSMoveNotification] Process Start : {request.SessionKey}");
-
         if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
             Log.PrintLog("[ERROR] CS_MoveNotification - peer not found");
@@ -451,8 +450,6 @@ public class ServerManager : IDisposable
             return false;
         }
 
-        Debug.WriteLine($"{DateTime.Now}\t [OnCSMoveNotification] Process Finish : {request.SessionKey}");
-
         MoveAction action = new MoveAction();
         action.playerSequence = playerSequence;
         action.playerSequence = playerSequence;
@@ -473,10 +470,16 @@ public class ServerManager : IDisposable
 
     private bool OnCSAttackRequest(Peer peer, CSAttackRequest request)
     {
-        Debug.WriteLine($"{DateTime.Now}\t [OnCSAttackRequest] Process Start : {request.SessionKey}");
-
-        if (m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
-        if (ValidateSessionKey(playerSequence, request.SessionKey)) return false;
+        if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
+        {
+            Log.PrintLog("[OnCSAttackRequest] Not found peer user", MsgLevel.Warning);
+            return false;
+        }
+        if (false == ValidateSessionKey(playerSequence, request.SessionKey))
+        {
+            Log.PrintLog("[OnCSAttackRequest] No validation CheckUser: {playerSequence}", MsgLevel.Warning);
+            return false;
+        }
 
         Log.PrintLog($"[RECV] CS_ATTACKRequest (Seq: {playerSequence}, AttackID : {request.AttackId}, Pos: {request.PositionX},{request.PositionY}, Aim: {request.AimDirection})");
 
@@ -489,16 +492,17 @@ public class ServerManager : IDisposable
                 request.PositionX,
                 request.PositionY,
                 request.AimDirection);
+
+            room.BroadcastAttackNotification(result);
+
+            Log.PrintLog($"[SEND] SC_ATTACK broadcasted (Hit: {result.isHit})");
         }
 
-        Debug.WriteLine($"{DateTime.Now}\t [OnCSAttackRequest] Process Complete : {request.SessionKey}");
         return true;
     }
 
     private bool OnCSHeartbeat(Peer peer, CSHeartbeat request)
     {
-        Debug.WriteLine($"{DateTime.Now}\t[OnCSHeartbeat] Process Start : {request.SessionKey}");
-
         if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence)) return false;
         if (false == ValidateSessionKey(playerSequence, request.SessionKey)) return false;
 
@@ -515,7 +519,6 @@ public class ServerManager : IDisposable
             }
         }
 
-        Debug.WriteLine($"{DateTime.Now}\t [OnCSHeartbeat] Process Complete : {request.SessionKey}");
         return true;
     }
 
