@@ -32,7 +32,7 @@ internal class Block : BaseObject
         SetAppearanceId(0);
     }
 
-    internal void Update(float deltaTime)
+    internal override void Update(float deltaTime)
     {
         base.Update(deltaTime);
     }

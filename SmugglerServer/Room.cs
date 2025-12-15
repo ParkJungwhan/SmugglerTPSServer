@@ -29,9 +29,6 @@ internal class Room
 
     private Random rand = new Random(32767);
 
-    private Room()
-    { }
-
     public Room(string roomCode)
     {
         m_host = null;

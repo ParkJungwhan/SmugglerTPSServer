@@ -33,14 +33,14 @@ public class PacketWrapper
             (EProtocol)BitConverter.ToInt32(data, 0);
     }
 
-    public static byte[] ExtractFlatBufferData(byte[] data, int dataSize)
-    {
-        if (data == null || dataSize <= 4) return null;
+    //public static byte[] ExtractFlatBufferData(byte[] data, int dataSize)
+    //{
+    //    if (data == null || dataSize <= 4) return null;
 
-        byte[] fbData = new byte[dataSize - 4];
-        Buffer.BlockCopy(data, 4, fbData, 0, fbData.Length);
-        return fbData;
-    }
+    //    byte[] fbData = new byte[dataSize - 4];
+    //    Buffer.BlockCopy(data, 4, fbData, 0, fbData.Length);
+    //    return fbData;
+    //}
 
     public EProtocol GetProtocol()
     {
@@ -53,7 +53,7 @@ public class PacketWrapper
 
     public Span<byte> GetDataOffset4() => m_data.AsSpan(4);
 
-    public byte[] GetFlatBufferData() => m_data.Length <= 4 ? null : GetDataOffset4().ToArray();
+    //public byte[] GetFlatBufferData() => m_data.Length <= 4 ? null : GetDataOffset4().ToArray();
 
     public int GetFlatBufferSize() => m_data.Length <= 4 ? 0 : m_data.Length - 4;
 

@@ -31,12 +31,6 @@ public class ServerManager : IDisposable
 
     private object m_lock = new object();   // only lock to input stream packet
 
-    public struct ReceivedPacket
-    {
-        public Peer peer;
-        public byte[] data;
-    };
-
     public ServerManager()
     {
         var intilib = Library.Initialize();
