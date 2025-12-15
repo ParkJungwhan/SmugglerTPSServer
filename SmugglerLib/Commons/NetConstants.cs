@@ -1,4 +1,4 @@
-﻿namespace TPSServer.Lib;
+﻿namespace SmugglerLib.Commons;
 
 public static class NetConstants
 {

@@ -41,13 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="enet.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <ProjectReference Include="..\SmugglerLib\SmugglerLib.csproj" />
   </ItemGroup>
-
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="flatc --csharp -o Generated ..\Client\Protocol\protocol.fbs" />
-  </Target>
 
 </Project>

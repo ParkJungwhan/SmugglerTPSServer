@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace SmugglerServer.Lib;
+namespace SmugglerLib.Commons;
 
 public static class TimeUtil
 {

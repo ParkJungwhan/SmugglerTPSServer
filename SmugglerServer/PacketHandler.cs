@@ -2,7 +2,7 @@
 using ENet;
 using Google.FlatBuffers;
 using Protocol;
-using SmugglerServer.Lib;
+using SmugglerLib.Commons;
 
 namespace SmugglerServer;
 

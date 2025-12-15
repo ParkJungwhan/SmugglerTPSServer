@@ -2,8 +2,7 @@
 using System.Security.Cryptography;
 using ENet;
 using Google.FlatBuffers;
-using SmugglerServer.Lib;
-using TPSServer.Lib;
+using SmugglerLib.Commons;
 
 namespace SmugglerServer;
 

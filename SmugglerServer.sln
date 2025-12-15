@@ -5,6 +5,10 @@ VisualStudioVersion = 17.14.36717.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmugglerServer", "SmugglerServer\SmugglerServer.csproj", "{FEE5EDE0-26A7-6F69-4AB8-CE5E032DB9EB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestBot", "TestBot\TestBot.csproj", "{59249009-B740-4C85-9FA9-7F41E376572E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmugglerLib", "SmugglerLib\SmugglerLib.csproj", "{B91887C0-1940-4F8F-8E76-F0D29AC69963}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{FEE5EDE0-26A7-6F69-4AB8-CE5E032DB9EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEE5EDE0-26A7-6F69-4AB8-CE5E032DB9EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEE5EDE0-26A7-6F69-4AB8-CE5E032DB9EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59249009-B740-4C85-9FA9-7F41E376572E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59249009-B740-4C85-9FA9-7F41E376572E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59249009-B740-4C85-9FA9-7F41E376572E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59249009-B740-4C85-9FA9-7F41E376572E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B91887C0-1940-4F8F-8E76-F0D29AC69963}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B91887C0-1940-4F8F-8E76-F0D29AC69963}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B91887C0-1940-4F8F-8E76-F0D29AC69963}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B91887C0-1940-4F8F-8E76-F0D29AC69963}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

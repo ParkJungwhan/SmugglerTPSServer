@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace SmugglerServer.Lib;
+namespace SmugglerLib.Commons;
 
 public readonly struct SteadyTimePoint
 {

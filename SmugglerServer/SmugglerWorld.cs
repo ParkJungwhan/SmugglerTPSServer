@@ -1,5 +1,4 @@
-﻿using SmugglerServer.Lib;
-using TPSServer.Lib;
+﻿using SmugglerLib.Commons;
 
 namespace SmugglerServer;
 

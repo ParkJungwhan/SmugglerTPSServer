@@ -1,4 +1,4 @@
-﻿namespace SmugglerServer.Lib;
+﻿namespace SmugglerLib.Commons;
 
 public struct MoveAction
 {

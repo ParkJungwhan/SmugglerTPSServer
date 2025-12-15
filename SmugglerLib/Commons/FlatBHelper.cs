@@ -1,7 +1,7 @@
 ﻿using Google.FlatBuffers;
 using Protocol;
 
-namespace SmugglerServer.Lib;
+namespace SmugglerLib.Commons;
 
 public static class FlatBHelper
 {
