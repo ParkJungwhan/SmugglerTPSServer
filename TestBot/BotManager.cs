@@ -1,24 +1,23 @@
-﻿using System.Collections.Concurrent;
-using System.Numerics;
-using ENet;
+﻿using ENet;
 using SmugglerLib.Commons;
 
 namespace TestBot;
 
 public class BotManager
 {
-    //private Dictionary<int, Host> m_DicClient;
-    //private Dictionary<int, Peer> m_DicPeer;
-
     private Dictionary<int, Bot> m_DicBot;
     private Address m_address;
 
     private int BotCount;
+    private bool m_running;
+    private uint m_lastUpdateLibTime;
+    private uint m_lastStatusLibTime;
 
     public BotManager(int nCount = 10)
     {
         BotCount = nCount;
         m_DicBot = new Dictionary<int, Bot>(nCount);
+        m_running = false;
     }
 
     public bool InitConnect()
@@ -33,51 +32,55 @@ public class BotManager
 
         Log.PrintLog($"Connect Bot: {BotCount}");
 
-        int nConnectedCount = 0;
-
         for (int i = 0; i < BotCount; i++)
         {
             var bot = new Bot(i);
             if (false == bot.Connect(m_address, 2))
             {
+                Log.PrintLog($"No Connected Bot : {i}");
                 continue;
             }
 
-            m_DicBot.Add(nConnectedCount++, bot);
+            Log.PrintLog($"Connected Bot : {i}");
+            m_DicBot.Add(i + 1, bot);
         }
+
+        Thread.Sleep(20);
 
         return true;
     }
 
     public void Running(CancellationToken token)
     {
-        long updateTime = 0;
+        m_running = true;
 
-        float m_lastUpdateTime = Library.Time;
-        float m_lastStatusTime = Library.Time;
+        m_lastUpdateLibTime = Library.Time;
+        m_lastStatusLibTime = Library.Time;
 
-        while (!token.IsCancellationRequested)
+        while (false == token.IsCancellationRequested)
         {
-            float now = Library.Time;
-
-            var deltatime = now - m_lastUpdateTime;
-            m_lastUpdateTime = now;
+            var nowtime = Library.Time;
+            var deltaLibtime = nowtime - m_lastUpdateLibTime;
+            m_lastUpdateLibTime = nowtime;
 
             foreach (var bot in m_DicBot)
             {
-                bot.Value.UpdateRunning(deltatime);
+                bot.Value.UpdateRunning(deltaLibtime);
             }
 
-            var statusElapsed = now - m_lastUpdateTime;
-
-            if (statusElapsed > 5.0f)
+            // 5초간 계속 갱신이라는데...아닌듯?
+            var statusLibElapsed = nowtime - m_lastStatusLibTime;
+            if (statusLibElapsed >= 5000.0f)
             {
+                Log.PrintLog($"call PrintStatus : {statusLibElapsed}");    // 10
                 PrintStatus();
-                statusElapsed = now;
+                m_lastStatusLibTime = nowtime;
             }
 
+            // 10ms 주기로 돌기
             Thread.Sleep(10);
         }
+        m_running = false;
     }
 
     private void PrintStatus()
@@ -85,18 +88,25 @@ public class BotManager
         var total = m_DicBot.Count;
         int connecting = 0, authenticating = 0, waitingRoom = 0, loading = 0, playing = 0, disconnected = 0;
 
-        foreach (var bot in m_DicBot)
-        {
-            switch (bot.Value.GetState())
-            {
-                case BotState.Disconnected: ++disconnected; break;
-                case BotState.Connecting: ++connecting; break;
-                case BotState.Authenticating: ++authenticating; break;
-                case BotState.WaitingRoom: ++waitingRoom; break;
-                case BotState.Loading: ++loading; break;
-                case BotState.Playing: ++playing; break;
-            }
-        }
+        disconnected = m_DicBot.Values.Count(x => x.GetState() == BotState.Disconnected);
+        connecting = m_DicBot.Values.Count(x => x.GetState() == BotState.Connecting);
+        authenticating = m_DicBot.Values.Count(x => x.GetState() == BotState.Authenticating);
+        waitingRoom = m_DicBot.Values.Count(x => x.GetState() == BotState.WaitingRoom);
+        loading = m_DicBot.Values.Count(x => x.GetState() == BotState.Loading);
+        playing = m_DicBot.Values.Count(x => x.GetState() == BotState.Playing);
+
+        //foreach (var bot in m_DicBot)
+        //{
+        //    switch (bot.Value.GetState())
+        //    {
+        //        case BotState.Disconnected: ++disconnected; break;
+        //        case BotState.Connecting: ++connecting; break;
+        //        case BotState.Authenticating: ++authenticating; break;
+        //        case BotState.WaitingRoom: ++waitingRoom; break;
+        //        case BotState.Loading: ++loading; break;
+        //        case BotState.Playing: ++playing; break;
+        //    }
+        //}
         Log.PrintLog($"[Status] Total: {total} Conn: {connecting} Auth: {authenticating} Wait: {waitingRoom} Load:{loading} Play: {playing} Disc: {disconnected}");
     }
 

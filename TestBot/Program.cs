@@ -16,7 +16,7 @@ internal class Program
             Log.PrintLog("숫자가 아니므로 10으로 시작함");
         }
 
-        BotManager conn = new BotManager();
+        BotManager conn = new BotManager(botcount);
         if (false == conn.InitConnect())
         {
             Log.PrintLog("초기화 실패");

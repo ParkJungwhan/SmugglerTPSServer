@@ -2,6 +2,33 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container py-4">
+    <h1 class="mb-3">서버 현황</h1>
 
-Welcome to your new app.
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body d-flex align-items-center">
+            <div class="display-4 fw-bold text-primary me-3">@currentConcurrentUsers</div>
+            <div>
+                <div class="fw-semibold">현재 동시 접속자 수</div>
+                <div class="text-muted small">서버 연동 준비 중</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body d-flex align-items-center">
+            <div class="display-4 fw-bold text-success me-3">@currentRoomCount</div>
+            <div>
+                <div class="fw-semibold">현재 생성된 방 개수</div>
+                <div class="text-muted small">서버 연동 준비 중</div>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-muted">실시간 서버 데이터 연동 후 자동 갱신될 예정입니다.</p>
+</div>
+
+@code {
+    private int currentConcurrentUsers = 0;
+    private int currentRoomCount = 0;
+}

@@ -1,0 +1,192 @@
+﻿openapi: 3.0.3
+info:
+  title: UDP Flatbuffer Command Bridge API
+  version: 0.1.0
+servers:
+  - url: http://localhost:5000
+paths:
+  /api/udp-commands/dispatch:
+    post:
+      summary: Dispatch a Flatbuffer command via UDP
+      operationId: dispatchCommand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DispatchAccepted'
+        '400':
+          description: Invalid payload
+        '500':
+          description: Dispatch failed
+  /api/udp-commands/{correlationId}:
+    get:
+      summary: Get status/result for a dispatched command
+      operationId: getCommandStatus
+      parameters:
+        - in: path
+          name: correlationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current status/result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandStatus'
+        '404':
+          description: Not found
+  /api/udp-commands/logs:
+    get:
+      summary: Query command logs
+      operationId: queryCommandLogs
+      parameters:
+        - in: query
+          name: commandType
+          schema:
+            type: string
+        - in: query
+          name: outcome
+          schema:
+            type: string
+            enum: [pending, sent, succeeded, failed, timeout]
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Paged command log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandLogPage'
+components:
+  schemas:
+    DispatchRequest:
+      type: object
+      required: [commandType, payloadBase64]
+      properties:
+        commandType:
+          type: string
+        payloadBase64:
+          type: string
+          description: Base64-encoded Flatbuffer payload from SmugglerLib.Generated.Protocol
+        timeoutMs:
+          type: integer
+          minimum: 1
+          maximum: 2000
+          default: 2000
+        maxRetries:
+          type: integer
+          minimum: 0
+          maximum: 5
+          default: 2
+    DispatchAccepted:
+      type: object
+      required: [correlationId, status]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, sent]
+    CommandStatus:
+      type: object
+      required: [correlationId, status]
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, sent, succeeded, failed, timeout]
+        outcome:
+          type: string
+          enum: [success, fault, timeout]
+          nullable: true
+        durationMs:
+          type: integer
+          nullable: true
+        responseBase64:
+          type: string
+          nullable: true
+          description: Base64-encoded Flatbuffer response payload
+        errorCode:
+          type: string
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+          nullable: true
+    CommandLog:
+      type: object
+      properties:
+        correlationId:
+          type: string
+          format: uuid
+        commandType:
+          type: string
+        outcome:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        receivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMs:
+          type: integer
+          nullable: true
+        attempts:
+          type: integer
+        errorMessage:
+          type: string
+          nullable: true
+    CommandLogPage:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommandLog'

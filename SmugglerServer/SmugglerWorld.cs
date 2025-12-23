@@ -1,4 +1,5 @@
 ﻿using SmugglerLib.Commons;
+using SmugglerServer.ToolConnector;
 
 namespace SmugglerServer;
 
@@ -11,8 +12,11 @@ public class SmugglerWorld
         ThreadPool.GetAvailableThreads(out var count, out var iocount);
         Log.PrintLog($"Start - Available ThreadPool Threads: Worker={count}, IO={iocount}");
 
-        ////////////////////////////////////////////////////////////////
         ushort port = NetConstants.DefaultPort;
+
+        //Signal 서버 설정 끝
+
+        ////////////////////////////////////////////////////////////////
 
         ServerManager server = new ServerManager();
 
@@ -31,6 +35,18 @@ public class SmugglerWorld
 
             using var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+            //Signal 서버 설정
+            string url = $"http://localhost:{port}";
+            // SmugglerSignal 클래스를 통한 SignalR 초기화
+
+            //var builder = WebApplication.CreateBuilder();
+            //builder.WebHost.UseUrls(url);
+            //builder.Services.AddSignalR();
+            //var app = builder.Build();
+
+            //// 허브 엔드포인트 매핑 (예: /smuggler)
+            //app.MapHub<SmugglerSignal>("/smuggler");
 
             server.Run(cts.Token);
 

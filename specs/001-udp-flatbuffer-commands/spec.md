@@ -3,95 +3,95 @@
 **Feature Branch**: `001-udp-flatbuffer-commands`  
 **Created**: 2025-12-16  
 **Status**: Draft  
-**Input**: User description: "ºí·¹ÀÌÀú À¥À» ÅëÇØ¼­ UDP ¼­¹ö¿Í Flatbuffer·Î Åë½ÅÇÏ¿© ÆÐÅ¶À» ÅëÇØ Ä¿¸Çµå Àü¼ÛÀÌ µÇ´Â ±¸¼ºÀ» ¸¸µé¾î¾ßÇÑ´Ù. ÆÐÅ¶Àº C:RepoSmugglerTPSServerSmugglerLibGeneratedProtocol¿¡ ÀÌ¹Ì ±¸¼ºµÇ¾î ÀÖ´Ù. ÆÐÅ¶ Ãß°¡´Â °³¹ßÀÚ°¡ ÇÒ ¿¹Á¤. flatbuffer¸¦ ÅëÇØ c++ udp ¼­¹ö¿Í Åë½ÅÀÌ µÇ¸é µÈ´Ù. ÀÌÈÄ DB´Â postgrsql°ú Åë½ÅÇÒ°ÍÀÌ´Ù. ±×·¡¼­ dapper¸¦ ÅëÇÑ Åë½ÅÀÌ ÁøÇàµÉ°Í"
+**Input**: User description: "ë¸”ë ˆì´ì € ì›¹ì„ í†µí•´ì„œ UDP ì„œë²„ì™€ Flatbufferë¡œ í†µì‹ í•˜ì—¬ íŒ¨í‚·ì„ í†µí•´ ì»¤ë§¨ë“œ ì „ì†¡ì´ ë˜ëŠ” êµ¬ì„±ì„ ë§Œë“¤ì–´ì•¼í•œë‹¤. íŒ¨í‚·ì€ C:RepoSmugglerTPSServerSmugglerLibGeneratedProtocolì— ì´ë¯¸ êµ¬ì„±ë˜ì–´ ìžˆë‹¤. íŒ¨í‚· ì¶”ê°€ëŠ” ê°œë°œìžê°€ í•  ì˜ˆì •. flatbufferë¥¼ í†µí•´ c++ udp ì„œë²„ì™€ í†µì‹ ì´ ë˜ë©´ ëœë‹¤. ì´í›„ DBëŠ” postgrsqlê³¼ í†µì‹ í• ê²ƒì´ë‹¤. ê·¸ëž˜ì„œ dapperë¥¼ í†µí•œ í†µì‹ ì´ ì§„í–‰ë ê²ƒ"
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - ¿î¿µÀÚ°¡ UDP ¸í·É Àü¼Û (Priority: P1)
+### User Story 1 - ìš´ì˜ìžê°€ UDP ëª…ë ¹ ì „ì†¡ (Priority: P1)
 
-¿î¿µÀÚ´Â Blazor À¥ µµ±¸¿¡¼­ ±âÁ¸ Flatbuffer ÆÐÅ¶ Á¤ÀÇ¸¦ ¼±ÅÃÇØ UDP ¼­¹ö·Î ¸í·ÉÀ» Àü¼ÛÇÑ´Ù.
+ìš´ì˜ìžëŠ” Blazor ì›¹ ë„êµ¬ì—ì„œ ê¸°ì¡´ Flatbuffer íŒ¨í‚· ì •ì˜ë¥¼ ì„ íƒí•´ UDP ì„œë²„ë¡œ ëª…ë ¹ì„ ì „ì†¡í•œë‹¤.
 
-**Why this priority**: ÇÙ½É ±â´ÉÀ¸·Î, °ü¸® ¸í·É ¼Û½ÅÀÌ °¡´ÉÇØ¾ß ´Ù¸¥ ±â´ÉÀÌ ÀÇ¹Ì¸¦ °®´Â´Ù.
+**Why this priority**: í•µì‹¬ ê¸°ëŠ¥ìœ¼ë¡œ, ê´€ë¦¬ ëª…ë ¹ ì†¡ì‹ ì´ ê°€ëŠ¥í•´ì•¼ ë‹¤ë¥¸ ê¸°ëŠ¥ì´ ì˜ë¯¸ë¥¼ ê°–ëŠ”ë‹¤.
 
-**Independent Test**: À¥ UI¿¡¼­ ÆÐÅ¶ ¼±ÅÃ/ÀÔ·Â ÈÄ Àü¼Û ½Ã ¼­¹ö ÀÀ´äÀ» ¹ÞÀ¸¸é ¿Ï·á »óÅÂ·Î Ç¥½ÃµÇ´ÂÁö È®ÀÎÇÑ´Ù.
+**Independent Test**: ì›¹ UIì—ì„œ íŒ¨í‚· ì„ íƒ/ìž…ë ¥ í›„ ì „ì†¡ ì‹œ ì„œë²„ ì‘ë‹µì„ ë°›ìœ¼ë©´ ì™„ë£Œ ìƒíƒœë¡œ í‘œì‹œë˜ëŠ”ì§€ í™•ì¸í•œë‹¤.
 
 **Acceptance Scenarios**:
 
-1. **Given** ¿î¿µÀÚ°¡ ÀÎÁõµÈ »óÅÂ·Î ¸í·É À¯Çü°ú ÆÄ¶ó¹ÌÅÍ¸¦ ¼±ÅÃÇÏ°í, **When** Àü¼ÛÀ» ¿äÃ»ÇÏ¸é, **Then** Flatbuffer Çü½ÄÀ¸·Î ÆÐÅ¶ÀÌ Á¶¸³µÇ¾î UDP ¼­¹ö·Î Àü¼ÛµÈ´Ù.
-2. **Given** ¼­¹ö°¡ ÀÀ´ä ÆÐÅ¶À» ¹ÝÈ¯ÇÒ ¶§, **When** À¥ µµ±¸°¡ ÀÀ´äÀ» ¼ö½ÅÇÏ¸é, **Then** ¼º°ø ¿©ºÎ¿Í ¼­¹ö ¸Þ½ÃÁö¸¦ UI¿¡ Ç¥½ÃÇÑ´Ù.
+1. **Given** ìš´ì˜ìžê°€ ì¸ì¦ëœ ìƒíƒœë¡œ ëª…ë ¹ ìœ í˜•ê³¼ íŒŒë¼ë¯¸í„°ë¥¼ ì„ íƒí•˜ê³ , **When** ì „ì†¡ì„ ìš”ì²­í•˜ë©´, **Then** Flatbuffer í˜•ì‹ìœ¼ë¡œ íŒ¨í‚·ì´ ì¡°ë¦½ë˜ì–´ UDP ì„œë²„ë¡œ ì „ì†¡ëœë‹¤.
+2. **Given** ì„œë²„ê°€ ì‘ë‹µ íŒ¨í‚·ì„ ë°˜í™˜í•  ë•Œ, **When** ì›¹ ë„êµ¬ê°€ ì‘ë‹µì„ ìˆ˜ì‹ í•˜ë©´, **Then** ì„±ê³µ ì—¬ë¶€ì™€ ì„œë²„ ë©”ì‹œì§€ë¥¼ UIì— í‘œì‹œí•œë‹¤.
 
 ---
 
-### User Story 2 - Àü¼Û »óÅÂ °¡½ÃÈ­ ¹× Àç½Ãµµ (Priority: P2)
+### User Story 2 - ì „ì†¡ ìƒíƒœ ê°€ì‹œí™” ë° ìž¬ì‹œë„ (Priority: P2)
 
-¿î¿µÀÚ´Â ÆÐÅ¶ Àü¼Û °á°ú(¼º°ø/Å¸ÀÓ¾Æ¿ô/½ÇÆÐ)¿Í Àç½Ãµµ ¿É¼ÇÀ» È®ÀÎÇÒ ¼ö ÀÖ´Ù.
+ìš´ì˜ìžëŠ” íŒ¨í‚· ì „ì†¡ ê²°ê³¼(ì„±ê³µ/íƒ€ìž„ì•„ì›ƒ/ì‹¤íŒ¨)ì™€ ìž¬ì‹œë„ ì˜µì…˜ì„ í™•ì¸í•  ìˆ˜ ìžˆë‹¤.
 
-**Why this priority**: UDP Æ¯¼º»ó ¼Õ½Ç °¡´É¼ºÀÌ ÀÖ¾î ¿î¿µÀÚ°¡ Áï½Ã »óÅÂ¸¦ ÆÄ¾ÇÇÏ°í Á¶Ä¡ÇØ¾ß ÇÑ´Ù.
+**Why this priority**: UDP íŠ¹ì„±ìƒ ì†ì‹¤ ê°€ëŠ¥ì„±ì´ ìžˆì–´ ìš´ì˜ìžê°€ ì¦‰ì‹œ ìƒíƒœë¥¼ íŒŒì•…í•˜ê³  ì¡°ì¹˜í•´ì•¼ í•œë‹¤.
 
-**Independent Test**: ¼­¹ö ÀÀ´ä Áö¿¬/¼Õ½ÇÀ» ½Ã¹Ä·¹ÀÌ¼ÇÇÏ¿© UI°¡ Å¸ÀÓ¾Æ¿ôÀ» Ç¥½ÃÇÏ°í Àç½Ãµµ µ¿ÀÛÀ» ¼öÇàÇÏ´ÂÁö È®ÀÎÇÑ´Ù.
+**Independent Test**: ì„œë²„ ì‘ë‹µ ì§€ì—°/ì†ì‹¤ì„ ì‹œë®¬ë ˆì´ì…˜í•˜ì—¬ UIê°€ íƒ€ìž„ì•„ì›ƒì„ í‘œì‹œí•˜ê³  ìž¬ì‹œë„ ë™ìž‘ì„ ìˆ˜í–‰í•˜ëŠ”ì§€ í™•ì¸í•œë‹¤.
 
 **Acceptance Scenarios**:
 
-1. **Given** ¼­¹ö ÀÀ´äÀÌ ¾øÀ» ¶§, **When** Å¸ÀÓ¾Æ¿ôÀÌ ¹ß»ýÇÏ¸é, **Then** UI°¡ ½ÇÆÐ »çÀ¯¸¦ Ç¥½ÃÇÏ°í Àç½Ãµµ ¹öÆ°À» Á¦°øÇÑ´Ù.
-2. **Given** Àç½Ãµµ¸¦ ¼öÇàÇÒ ¶§, **When** ¼­¹ö°¡ ¼º°ø ÀÀ´äÀ» ¹ÝÈ¯ÇÏ¸é, **Then** ÃÖÁ¾ ¼º°ø »óÅÂ·Î ¾÷µ¥ÀÌÆ®ÇÏ°í ÀÌ·ÂÀ» ³²±ä´Ù.
+1. **Given** ì„œë²„ ì‘ë‹µì´ ì—†ì„ ë•Œ, **When** íƒ€ìž„ì•„ì›ƒì´ ë°œìƒí•˜ë©´, **Then** UIê°€ ì‹¤íŒ¨ ì‚¬ìœ ë¥¼ í‘œì‹œí•˜ê³  ìž¬ì‹œë„ ë²„íŠ¼ì„ ì œê³µí•œë‹¤.
+2. **Given** ìž¬ì‹œë„ë¥¼ ìˆ˜í–‰í•  ë•Œ, **When** ì„œë²„ê°€ ì„±ê³µ ì‘ë‹µì„ ë°˜í™˜í•˜ë©´, **Then** ìµœì¢… ì„±ê³µ ìƒíƒœë¡œ ì—…ë°ì´íŠ¸í•˜ê³  ì´ë ¥ì„ ë‚¨ê¸´ë‹¤.
 
 ---
 
-### User Story 3 - ¸í·É/ÀÀ´ä ÀÌ·Â ±â·Ï (Priority: P3)
+### User Story 3 - ëª…ë ¹/ì‘ë‹µ ì´ë ¥ ê¸°ë¡ (Priority: P3)
 
-¿î¿µÀÚ´Â ¸í·É Àü¼Û¡¤ÀÀ´ä ÀÌ·ÂÀÌ DB¿¡ ÀúÀåµÇ¾î ÀÌÈÄ °¨»ç/ºÐ¼®¿¡ È°¿ëÇÒ ¼ö ÀÖ´Ù.
+ìš´ì˜ìžëŠ” ëª…ë ¹ ì „ì†¡Â·ì‘ë‹µ ì´ë ¥ì´ DBì— ì €ìž¥ë˜ì–´ ì´í›„ ê°ì‚¬/ë¶„ì„ì— í™œìš©í•  ìˆ˜ ìžˆë‹¤.
 
-**Why this priority**: ¿î¿µ ÃßÀû¼º°ú È¸±Í ºÐ¼®À» À§ÇØ ÀÌ·ÂÀÌ ÇÊ¿äÇÏ´Ù.
+**Why this priority**: ìš´ì˜ ì¶”ì ì„±ê³¼ íšŒê·€ ë¶„ì„ì„ ìœ„í•´ ì´ë ¥ì´ í•„ìš”í•˜ë‹¤.
 
-**Independent Test**: ¸í·É Àü¼Û ÈÄ DB¿¡¼­ ÇØ´ç ¿äÃ»/ÀÀ´ä ±â·ÏÀÌ »ý¼ºµÇ°í, UI³ª º¸°í¼­¿¡¼­ Á¶È¸ °¡´ÉÇÔÀ» È®ÀÎÇÑ´Ù.
+**Independent Test**: ëª…ë ¹ ì „ì†¡ í›„ DBì—ì„œ í•´ë‹¹ ìš”ì²­/ì‘ë‹µ ê¸°ë¡ì´ ìƒì„±ë˜ê³ , UIë‚˜ ë³´ê³ ì„œì—ì„œ ì¡°íšŒ ê°€ëŠ¥í•¨ì„ í™•ì¸í•œë‹¤.
 
 **Acceptance Scenarios**:
 
-1. **Given** ¸í·ÉÀÌ ¼º°ø/½ÇÆÐ·Î Á¾·áµÇ¾úÀ» ¶§, **When** ±â·Ï ÀÛ¾÷ÀÌ ¼öÇàµÇ¸é, **Then** ¿äÃ»ÀÚ, ¸í·É À¯Çü, ÆÄ¶ó¹ÌÅÍ, ÀÀ´ä ÄÚµå/¸Þ½ÃÁö, Å¸ÀÓ½ºÅÆÇÁ°¡ DB¿¡ ÀúÀåµÈ´Ù.
-2. **Given** ÀúÀåµÈ ÀÌ·ÂÀÌ ÀÖÀ» ¶§, **When** ¿î¿µÀÚ°¡ °Ë»ö Á¶°ÇÀ¸·Î Á¶È¸ÇÏ¸é, **Then** ÇØ´ç °á°ú°¡ Á¤·Ä¡¤ÇÊÅÍ¸µµÇ¾î Ç¥½ÃµÈ´Ù.
+1. **Given** ëª…ë ¹ì´ ì„±ê³µ/ì‹¤íŒ¨ë¡œ ì¢…ë£Œë˜ì—ˆì„ ë•Œ, **When** ê¸°ë¡ ìž‘ì—…ì´ ìˆ˜í–‰ë˜ë©´, **Then** ìš”ì²­ìž, ëª…ë ¹ ìœ í˜•, íŒŒë¼ë¯¸í„°, ì‘ë‹µ ì½”ë“œ/ë©”ì‹œì§€, íƒ€ìž„ìŠ¤íƒ¬í”„ê°€ DBì— ì €ìž¥ëœë‹¤.
+2. **Given** ì €ìž¥ëœ ì´ë ¥ì´ ìžˆì„ ë•Œ, **When** ìš´ì˜ìžê°€ ê²€ìƒ‰ ì¡°ê±´ìœ¼ë¡œ ì¡°íšŒí•˜ë©´, **Then** í•´ë‹¹ ê²°ê³¼ê°€ ì •ë ¬Â·í•„í„°ë§ë˜ì–´ í‘œì‹œëœë‹¤.
 
 ---
 
 ### Edge Cases
 
-- UDP ÆÐÅ¶ ¼Õ½Ç/Áö¿¬À¸·Î ÀÀ´äÀÌ ¾ø´Â °æ¿ì Å¸ÀÓ¾Æ¿ô ¹× Àç½Ãµµ Ã³¸®.
-- Flatbuffer ½ºÅ°¸¶ ¹öÀü ºÒÀÏÄ¡³ª ¾Ë ¼ö ¾ø´Â ÆÐÅ¶ À¯ÇüÀ» ¼ö½ÅÇÒ ¶§ ¿À·ù Ç¥½Ã ¹× ·Î±ë.
-- DB ¿¬°á ½ÇÆÐ ½Ã Àü¼Û ÀÚÃ¼´Â Áö¼ÓÇÏµÇ, ÀÌ·Â ÀûÀç ½ÇÆÐ¸¦ »ç¿ëÀÚ¿¡°Ô ¾Ë¸®°í Àç½Ãµµ °æ·Î¸¦ Á¦°ø.
-- µ¿ÀÏ ¸í·É ¹Ýº¹ Àü¼Û ½Ã Áßº¹ Ã³¸®(¼­¹ö idempotency ¿©ºÎ)¿¡ µû¶ó ÀçÀü¼Û Á¤Ã¥À» ¸í½ÃÀûÀ¸·Î ¾È³».
+- UDP íŒ¨í‚· ì†ì‹¤/ì§€ì—°ìœ¼ë¡œ ì‘ë‹µì´ ì—†ëŠ” ê²½ìš° íƒ€ìž„ì•„ì›ƒ ë° ìž¬ì‹œë„ ì²˜ë¦¬.
+- Flatbuffer ìŠ¤í‚¤ë§ˆ ë²„ì „ ë¶ˆì¼ì¹˜ë‚˜ ì•Œ ìˆ˜ ì—†ëŠ” íŒ¨í‚· ìœ í˜•ì„ ìˆ˜ì‹ í•  ë•Œ ì˜¤ë¥˜ í‘œì‹œ ë° ë¡œê¹….
+- DB ì—°ê²° ì‹¤íŒ¨ ì‹œ ì „ì†¡ ìžì²´ëŠ” ì§€ì†í•˜ë˜, ì´ë ¥ ì ìž¬ ì‹¤íŒ¨ë¥¼ ì‚¬ìš©ìžì—ê²Œ ì•Œë¦¬ê³  ìž¬ì‹œë„ ê²½ë¡œë¥¼ ì œê³µ.
+- ë™ì¼ ëª…ë ¹ ë°˜ë³µ ì „ì†¡ ì‹œ ì¤‘ë³µ ì²˜ë¦¬(ì„œë²„ idempotency ì—¬ë¶€)ì— ë”°ë¼ ìž¬ì „ì†¡ ì •ì±…ì„ ëª…ì‹œì ìœ¼ë¡œ ì•ˆë‚´.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: ½Ã½ºÅÛÀº ±âÁ¸ `SmugglerLib/Generated/Protocol`¿¡ Á¤ÀÇµÈ Flatbuffer ÆÐÅ¶ ½ºÅ°¸¶¸¦ »ç¿ëÇØ UI ÀÔ·ÂÀ» °ËÁõ¡¤Á¶¸³ÇÏ¿© UDP Àü¼Û¿¡ ÀûÇÕÇÑ ¹ÙÀÌÆ® ÆäÀÌ·Îµå¸¦ »ý¼ºÇØ¾ß ÇÑ´Ù.
-- **FR-002**: ½Ã½ºÅÛÀº ±¸¼ºµÈ UDP ¿£µåÆ÷ÀÎÆ®·Î ÆÐÅ¶À» Àü¼ÛÇÏ°í, ÀÀ´ä ¼ö½Å ½Ã ¼º°ø/½ÇÆÐ ÄÚµå¿Í ¸Þ½ÃÁö¸¦ UI¿¡ Ç¥ÁØÈ­µÈ »óÅÂ·Î ¹Ý¿µÇØ¾ß ÇÑ´Ù.
-- **FR-003**: ½Ã½ºÅÛÀº ÀÀ´äÀÌ ¾øÀ» ¶§ p95 ±âÁØ 2ÃÊ ÀÌ³»¿¡ Å¸ÀÓ¾Æ¿ôÀ» Ç¥½ÃÇÏ°í, ÃÖ¼Ò ÇÑ ¹ø ÀÌ»óÀÇ Àç½Ãµµ ¿É¼ÇÀ» Á¦°øÇØ¾ß ÇÑ´Ù.
-- **FR-004**: ½Ã½ºÅÛÀº Àü¼Û/ÀÀ´ä »óÅÂ¸¦ ½Ç½Ã°£À¸·Î Ç¥½ÃÇÏ¸ç, ¿î¿µÀÚ°¡ Àç½Ãµµ¡¤Áß´ÜÀ» ¼±ÅÃÇÒ ¼ö ÀÖ´Â UI¸¦ Á¦°øÇØ¾ß ÇÑ´Ù.
-- **FR-005**: ½Ã½ºÅÛÀº ¸ðµç Àü¼Û ¿äÃ»¿¡ ´ëÇØ °íÀ¯ ½Äº°ÀÚ, »ç¿ëÀÚ, ¸í·É À¯Çü, ÆÄ¶ó¹ÌÅÍ, Àü¼Û ½Ã°¢, ÀÀ´ä ½Ã°¢/°á°ú¸¦ ±â·ÏÇÏ°í Á¶È¸¡¤ÇÊÅÍ¸µ ±â´ÉÀ» Á¦°øÇØ¾ß ÇÑ´Ù.
-- **FR-006**: ½Ã½ºÅÛÀº DB ¿¬°á Á¤º¸, UDP ´ë»ó ÁÖ¼Ò/Æ÷Æ®, Flatbuffer ½ºÅ°¸¶ ¹öÀüÀ» È¯°æ ¼³Á¤À¸·Î ¹Þ¾ÆµéÀÌ¸ç, ¼³Á¤ º¯°æ ½Ã ¾Û Àç½ÃÀÛ ¾øÀÌ ¹Ý¿µ ¿©ºÎ¸¦ ¸íÈ®È÷ ¾È³»ÇØ¾ß ÇÑ´Ù.
-- **FR-007**: ½Ã½ºÅÛÀº ÀÎÁõµÈ ¿î¿µÀÚ¸¸ ¸í·ÉÀ» Àü¼Û¡¤Á¶È¸ÇÒ ¼ö ÀÖµµ·Ï ±âÁ¸ ±ÇÇÑ ¸ðµ¨À» Àû¿ëÇÏ°í, ¸ðµç ½ÇÆÐ/¿¹¿Ü¸¦ ·Î±ëÇØ¾ß ÇÑ´Ù.
-- **FR-008**: ½Ã½ºÅÛÀº ½ºÅ°¸¶ ¾÷µ¥ÀÌÆ®(»õ ÆÐÅ¶ Ãß°¡ µî) ½Ã ÃÖ½Å ½ºÅ°¸¶¸¦ ºÒ·¯¿Í UI ¼±ÅÃÁö¿Í °ËÁõ ·ÎÁ÷À» ÀÏ°üµÇ°Ô ¹Ý¿µÇØ¾ß ÇÑ´Ù.
+- **FR-001**: ì‹œìŠ¤í…œì€ ê¸°ì¡´ `SmugglerLib/Generated/Protocol`ì— ì •ì˜ëœ Flatbuffer íŒ¨í‚· ìŠ¤í‚¤ë§ˆë¥¼ ì‚¬ìš©í•´ UI ìž…ë ¥ì„ ê²€ì¦Â·ì¡°ë¦½í•˜ì—¬ UDP ì „ì†¡ì— ì í•©í•œ ë°”ì´íŠ¸ íŽ˜ì´ë¡œë“œë¥¼ ìƒì„±í•´ì•¼ í•œë‹¤.
+- **FR-002**: ì‹œìŠ¤í…œì€ êµ¬ì„±ëœ UDP ì—”ë“œí¬ì¸íŠ¸ë¡œ íŒ¨í‚·ì„ ì „ì†¡í•˜ê³ , ì‘ë‹µ ìˆ˜ì‹  ì‹œ ì„±ê³µ/ì‹¤íŒ¨ ì½”ë“œì™€ ë©”ì‹œì§€ë¥¼ UIì— í‘œì¤€í™”ëœ ìƒíƒœë¡œ ë°˜ì˜í•´ì•¼ í•œë‹¤.
+- **FR-003**: ì‹œìŠ¤í…œì€ ì‘ë‹µì´ ì—†ì„ ë•Œ p95 ê¸°ì¤€ 2ì´ˆ ì´ë‚´ì— íƒ€ìž„ì•„ì›ƒì„ í‘œì‹œí•˜ê³ , ìµœì†Œ í•œ ë²ˆ ì´ìƒì˜ ìž¬ì‹œë„ ì˜µì…˜ì„ ì œê³µí•´ì•¼ í•œë‹¤.
+- **FR-004**: ì‹œìŠ¤í…œì€ ì „ì†¡/ì‘ë‹µ ìƒíƒœë¥¼ ì‹¤ì‹œê°„ìœ¼ë¡œ í‘œì‹œí•˜ë©°, ìš´ì˜ìžê°€ ìž¬ì‹œë„Â·ì¤‘ë‹¨ì„ ì„ íƒí•  ìˆ˜ ìžˆëŠ” UIë¥¼ ì œê³µí•´ì•¼ í•œë‹¤.
+- **FR-005**: ì‹œìŠ¤í…œì€ ëª¨ë“  ì „ì†¡ ìš”ì²­ì— ëŒ€í•´ ê³ ìœ  ì‹ë³„ìž, ì‚¬ìš©ìž, ëª…ë ¹ ìœ í˜•, íŒŒë¼ë¯¸í„°, ì „ì†¡ ì‹œê°, ì‘ë‹µ ì‹œê°/ê²°ê³¼ë¥¼ ê¸°ë¡í•˜ê³  ì¡°íšŒÂ·í•„í„°ë§ ê¸°ëŠ¥ì„ ì œê³µí•´ì•¼ í•œë‹¤.
+- **FR-006**: ì‹œìŠ¤í…œì€ DB ì—°ê²° ì •ë³´, UDP ëŒ€ìƒ ì£¼ì†Œ/í¬íŠ¸, Flatbuffer ìŠ¤í‚¤ë§ˆ ë²„ì „ì„ í™˜ê²½ ì„¤ì •ìœ¼ë¡œ ë°›ì•„ë“¤ì´ë©°, ì„¤ì • ë³€ê²½ ì‹œ ì•± ìž¬ì‹œìž‘ ì—†ì´ ë°˜ì˜ ì—¬ë¶€ë¥¼ ëª…í™•ížˆ ì•ˆë‚´í•´ì•¼ í•œë‹¤.
+- **FR-007**: ì‹œìŠ¤í…œì€ ì¸ì¦ëœ ìš´ì˜ìžë§Œ ëª…ë ¹ì„ ì „ì†¡Â·ì¡°íšŒí•  ìˆ˜ ìžˆë„ë¡ ê¸°ì¡´ ê¶Œí•œ ëª¨ë¸ì„ ì ìš©í•˜ê³ , ëª¨ë“  ì‹¤íŒ¨/ì˜ˆì™¸ë¥¼ ë¡œê¹…í•´ì•¼ í•œë‹¤.
+- **FR-008**: ì‹œìŠ¤í…œì€ ìŠ¤í‚¤ë§ˆ ì—…ë°ì´íŠ¸(ìƒˆ íŒ¨í‚· ì¶”ê°€ ë“±) ì‹œ ìµœì‹  ìŠ¤í‚¤ë§ˆë¥¼ ë¶ˆëŸ¬ì™€ UI ì„ íƒì§€ì™€ ê²€ì¦ ë¡œì§ì„ ì¼ê´€ë˜ê²Œ ë°˜ì˜í•´ì•¼ í•œë‹¤.
 
 ### Key Entities *(include if feature involves data)*
 
-- **CommandPacket**: Àü¼ÛÇÒ ¸í·É À¯Çü°ú ÆÄ¶ó¹ÌÅÍ¸¦ Ä¸½¶È­ÇÑ ±¸Á¶(Flatbuffer Á¤ÀÇ ±â¹Ý).
-- **CommandDispatch**: Àü¼Û ¿äÃ» ¸ÞÅ¸µ¥ÀÌÅÍ(¿äÃ»ÀÚ, ¸ñÀûÁö, ½Ã°¢, »óÅÂ, Àç½Ãµµ È½¼ö).
-- **CommandResult**: ÀÀ´ä ÄÚµå/¸Þ½ÃÁö, ¼ö½Å ½Ã°¢, ¿À·ù Á¤º¸, ¿¬°èµÈ Dispatch ½Äº°ÀÚ.
+- **CommandPacket**: ì „ì†¡í•  ëª…ë ¹ ìœ í˜•ê³¼ íŒŒë¼ë¯¸í„°ë¥¼ ìº¡ìŠí™”í•œ êµ¬ì¡°(Flatbuffer ì •ì˜ ê¸°ë°˜).
+- **CommandDispatch**: ì „ì†¡ ìš”ì²­ ë©”íƒ€ë°ì´í„°(ìš”ì²­ìž, ëª©ì ì§€, ì‹œê°, ìƒíƒœ, ìž¬ì‹œë„ íšŸìˆ˜).
+- **CommandResult**: ì‘ë‹µ ì½”ë“œ/ë©”ì‹œì§€, ìˆ˜ì‹  ì‹œê°, ì˜¤ë¥˜ ì •ë³´, ì—°ê³„ëœ Dispatch ì‹ë³„ìž.
 
-## Ç°Áú ±âÁØ *(mandatory)*
+## í’ˆì§ˆ ê¸°ì¤€ *(mandatory)*
 
-- **Testing**: ´ÜÀ§(ÆÐÅ¶ Á¶¸³/°ËÁõ), ÅëÇÕ(UDP ¼Û¼ö½Å ½Ã³ª¸®¿À), °è¾à(Flatbuffer ½ºÅ°¸¶ È£È¯) Å×½ºÆ®¸¦ ÀÛ¼ºÇÏ°í `dotnet test`°¡ ÀçÇö °¡´ÉÇÏ°Ô Åë°úÇØ¾ß ÇÑ´Ù.
-- **Performance**: ¿î¿µÀÚ°¡ Àü¼Û ¹öÆ°À» ´©¸¥ ÈÄ 95% ¿äÃ»ÀÌ 2ÃÊ ÀÌ³» »óÅÂ ¾÷µ¥ÀÌÆ®¸¦ º¸¸ç, 50rps µ¿½Ã ¿äÃ»¿¡¼­µµ Áö¿¬ ¸ñÇ¥¸¦ À¯ÁöÇÑ´Ù´Â °èÈ¹°ú ÃøÁ¤ ¹æ¹ýÀ» ¸í½ÃÇÑ´Ù.
-- **Security**: ºñ¹Ð¡¤¿£µåÆ÷ÀÎÆ®´Â È¯°æ ¼³Á¤À¸·Î °ü¸®ÇÏ°í, ÀÔ·Â °ËÁõ¡¤±ÇÇÑ È®ÀÎÀ» °ÅÃÄ¼­¸¸ Àü¼ÛÇÑ´Ù. ¸ðµç ¿¡·¯¡¤°ÅºÎ ÀÌº¥Æ®´Â °¨»ç ·Î±×¿¡ ³²±ä´Ù.
-- **Documentation**: ½ºÆå/ÇÃ·£/ÅÂ½ºÅ©¿Í ¿î¿µ ·Î±×¿¡ Àü¼Û Èå¸§, Àç½Ãµµ/Å¸ÀÓ¾Æ¿ô Á¤Ã¥, ÀÇÁ¸ ½ºÅ°¸¶ ¹öÀü, ¼³Á¤ ¹æ¹ýÀ» µ¿ÀÏ ¸±¸®½º¿¡ ±â·ÏÇÑ´Ù.
-- **Quality Bar**: SmugglerLib ½ºÅ°¸¶¿Í µ¿±âÈ­ »óÅÂ¸¦ À¯ÁöÇÏ°í, ¸°Æ®/Á¤Àû ºÐ¼® °æ°í ¾øÀÌ ºôµåµÇ¸ç, ¸®ºä ½Ã Å×½ºÆ®/¼º´É/º¸¾È ¿µÇâ ¿ä¾àÀ» Æ÷ÇÔÇÑ´Ù.
+- **Testing**: ë‹¨ìœ„(íŒ¨í‚· ì¡°ë¦½/ê²€ì¦), í†µí•©(UDP ì†¡ìˆ˜ì‹  ì‹œë‚˜ë¦¬ì˜¤), ê³„ì•½(Flatbuffer ìŠ¤í‚¤ë§ˆ í˜¸í™˜) í…ŒìŠ¤íŠ¸ë¥¼ ìž‘ì„±í•˜ê³  `dotnet test`ê°€ ìž¬í˜„ ê°€ëŠ¥í•˜ê²Œ í†µê³¼í•´ì•¼ í•œë‹¤.
+- **Performance**: ìš´ì˜ìžê°€ ì „ì†¡ ë²„íŠ¼ì„ ëˆ„ë¥¸ í›„ 95% ìš”ì²­ì´ 2ì´ˆ ì´ë‚´ ìƒíƒœ ì—…ë°ì´íŠ¸ë¥¼ ë³´ë©°, 50rps ë™ì‹œ ìš”ì²­ì—ì„œë„ ì§€ì—° ëª©í‘œë¥¼ ìœ ì§€í•œë‹¤ëŠ” ê³„íšê³¼ ì¸¡ì • ë°©ë²•ì„ ëª…ì‹œí•œë‹¤.
+- **Security**: ë¹„ë°€Â·ì—”ë“œí¬ì¸íŠ¸ëŠ” í™˜ê²½ ì„¤ì •ìœ¼ë¡œ ê´€ë¦¬í•˜ê³ , ìž…ë ¥ ê²€ì¦Â·ê¶Œí•œ í™•ì¸ì„ ê±°ì³ì„œë§Œ ì „ì†¡í•œë‹¤. ëª¨ë“  ì—ëŸ¬Â·ê±°ë¶€ ì´ë²¤íŠ¸ëŠ” ê°ì‚¬ ë¡œê·¸ì— ë‚¨ê¸´ë‹¤.
+- **Documentation**: ìŠ¤íŽ™/í”Œëžœ/íƒœìŠ¤í¬ì™€ ìš´ì˜ ë¡œê·¸ì— ì „ì†¡ íë¦„, ìž¬ì‹œë„/íƒ€ìž„ì•„ì›ƒ ì •ì±…, ì˜ì¡´ ìŠ¤í‚¤ë§ˆ ë²„ì „, ì„¤ì • ë°©ë²•ì„ ë™ì¼ ë¦´ë¦¬ìŠ¤ì— ê¸°ë¡í•œë‹¤.
+- **Quality Bar**: SmugglerLib ìŠ¤í‚¤ë§ˆì™€ ë™ê¸°í™” ìƒíƒœë¥¼ ìœ ì§€í•˜ê³ , ë¦°íŠ¸/ì •ì  ë¶„ì„ ê²½ê³  ì—†ì´ ë¹Œë“œë˜ë©°, ë¦¬ë·° ì‹œ í…ŒìŠ¤íŠ¸/ì„±ëŠ¥/ë³´ì•ˆ ì˜í–¥ ìš”ì•½ì„ í¬í•¨í•œë‹¤.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: ¿î¿µÀÚ°¡ Á¤ÀÇµÈ ¸í·ÉÀ» Àü¼ÛÇßÀ» ¶§ 95% ÀÌ»ó¿¡¼­ 2ÃÊ ÀÌ³»¿¡ ¼º°ø/½ÇÆÐ »óÅÂ°¡ UI¿¡ Ç¥½ÃµÈ´Ù.
-- **SC-002**: UDP ÀÀ´ä ¼Õ½Ç »óÈ²¿¡¼­ ÃÖ¼Ò 1È¸ Àç½Ãµµ ÈÄ 90% ÀÌ»óÀÌ ¼º°ø »óÅÂ·Î ÀüÈ¯µÈ´Ù(¼­¹ö °¡¿ë ½Ã ±âÁØ).
-- **SC-003**: ¸ðµç Àü¼Û °Ç¿¡ ´ëÇØ ¿äÃ»ÀÚ, ¸í·É À¯Çü, °á°ú°¡ DB Á¶È¸¿¡¼­ 100% È®ÀÎ °¡´ÉÇÏ´Ù.
-- **SC-004**: »ç¿ëÀÚ ¸¸Á·µµ Á¶»ç ¶Ç´Â ÇÇµå¹é¿¡¼­ ¡°¸í·É Àü¼Û Èå¸§ÀÌ ¸íÈ®ÇÏ´Ù¡± Ç×¸ñ¿¡ 80% ÀÌ»ó ±àÁ¤ ÀÀ´äÀ» ¾ò´Â´Ù.
+- **SC-001**: ìš´ì˜ìžê°€ ì •ì˜ëœ ëª…ë ¹ì„ ì „ì†¡í–ˆì„ ë•Œ 95% ì´ìƒì—ì„œ 2ì´ˆ ì´ë‚´ì— ì„±ê³µ/ì‹¤íŒ¨ ìƒíƒœê°€ UIì— í‘œì‹œëœë‹¤.
+- **SC-002**: UDP ì‘ë‹µ ì†ì‹¤ ìƒí™©ì—ì„œ ìµœì†Œ 1íšŒ ìž¬ì‹œë„ í›„ 90% ì´ìƒì´ ì„±ê³µ ìƒíƒœë¡œ ì „í™˜ëœë‹¤(ì„œë²„ ê°€ìš© ì‹œ ê¸°ì¤€).
+- **SC-003**: ëª¨ë“  ì „ì†¡ ê±´ì— ëŒ€í•´ ìš”ì²­ìž, ëª…ë ¹ ìœ í˜•, ê²°ê³¼ê°€ DB ì¡°íšŒì—ì„œ 100% í™•ì¸ ê°€ëŠ¥í•˜ë‹¤.
+- **SC-004**: ì‚¬ìš©ìž ë§Œì¡±ë„ ì¡°ì‚¬ ë˜ëŠ” í”¼ë“œë°±ì—ì„œ â€œëª…ë ¹ ì „ì†¡ íë¦„ì´ ëª…í™•í•˜ë‹¤â€ í•­ëª©ì— 80% ì´ìƒ ê¸ì • ì‘ë‹µì„ ì–»ëŠ”ë‹¤.
 

@@ -1,4 +1,3 @@
-using TPSManager.Client.Pages;
 using TPSManager.Components;
 
 namespace TPSManager
@@ -14,6 +13,8 @@ namespace TPSManager
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+            // udp 서버에 연결하는 부분 처리
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
@@ -24,7 +25,8 @@ namespace TPSManager
             else
             {
                 app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                // The default HSTS value is 30 days. You may want to change this for production scenarios,
+                // see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 

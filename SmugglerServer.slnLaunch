@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "BotTest",
+    "Projects": [
+      {
+        "Path": "SmugglerServer\\SmugglerServer.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "TestBot\\TestBot.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
