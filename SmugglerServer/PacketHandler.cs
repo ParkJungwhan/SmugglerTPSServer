@@ -62,7 +62,7 @@ internal class PacketHandler
     {
         if (data == null || dataSize == 0)
         {
-            Log.PrintLog("Invalid packet data", MsgLevel.Error);
+            Log.Print("Invalid packet data", MsgLevel.Error);
             Console.Error.WriteLine("Invalid packet data");
             return false;
         }
@@ -70,19 +70,19 @@ internal class PacketHandler
         int messageId = ExtractMessageId(data, dataSize);
         if (messageId == 0)
         {
-            Log.PrintLog("Failed to extract message ID", MsgLevel.Error);
+            Log.Print("Failed to extract message ID", MsgLevel.Error);
             return false;
         }
 
         if (!_handlers.TryGetValue(messageId, out var handler))
         {
-            Log.PrintLog($"No handler registered for message ID: {messageId}", MsgLevel.Error);
+            Log.Print($"No handler registered for message ID: {messageId}", MsgLevel.Error);
             return false;
         }
 
         if (dataSize < 4)
         {
-            Log.PrintLog("Packet too small", MsgLevel.Error);
+            Log.Print("Packet too small", MsgLevel.Error);
             return false;
         }
 

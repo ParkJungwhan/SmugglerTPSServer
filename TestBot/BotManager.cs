@@ -24,24 +24,24 @@ public class BotManager
     {
         Library.Initialize();
 
-        Log.PrintLog($"Start: Library.Initialize");
+        Log.Print($"Start: Library.Initialize");
 
         m_address = new Address();
         m_address.SetHost("127.0.0.1");
         m_address.Port = 7775;
 
-        Log.PrintLog($"Connect Bot: {BotCount}");
+        Log.Print($"Connect Bot: {BotCount}");
 
         for (int i = 0; i < BotCount; i++)
         {
             var bot = new Bot(i);
             if (false == bot.Connect(m_address, 2))
             {
-                Log.PrintLog($"No Connected Bot : {i}");
+                Log.Print($"No Connected Bot : {i}");
                 continue;
             }
 
-            Log.PrintLog($"Connected Bot : {i}");
+            Log.Print($"Connected Bot : {i}");
             m_DicBot.Add(i + 1, bot);
         }
 
@@ -72,7 +72,7 @@ public class BotManager
             var statusLibElapsed = nowtime - m_lastStatusLibTime;
             if (statusLibElapsed >= 5000.0f)
             {
-                Log.PrintLog($"call PrintStatus : {statusLibElapsed}");    // 10
+                Log.Print($"call PrintStatus : {statusLibElapsed}");    // 10
                 PrintStatus();
                 m_lastStatusLibTime = nowtime;
             }
@@ -107,12 +107,12 @@ public class BotManager
         //        case BotState.Playing: ++playing; break;
         //    }
         //}
-        Log.PrintLog($"[Status] Total: {total} Conn: {connecting} Auth: {authenticating} Wait: {waitingRoom} Load:{loading} Play: {playing} Disc: {disconnected}");
+        Log.Print($"[Status] Total: {total} Conn: {connecting} Auth: {authenticating} Wait: {waitingRoom} Load:{loading} Play: {playing} Disc: {disconnected}");
     }
 
     public void StopConnect()
     {
-        Log.PrintLog("Stop Connect. Library.Deinitialize");
+        Log.Print("Stop Connect. Library.Deinitialize");
         Library.Deinitialize();
     }
 }

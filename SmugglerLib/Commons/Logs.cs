@@ -10,7 +10,7 @@ public enum MsgLevel
 
 public static class Log
 {
-    public static void PrintLog(string msg, MsgLevel msglv = MsgLevel.Debug)
+    public static void Print(string msg, MsgLevel msglv = MsgLevel.Debug)
     {
         if (msglv >= MsgLevel.Information)
         {
@@ -25,4 +25,6 @@ public static class Log
         Console.WriteLine($"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}\t {msg}");
         Console.ResetColor();
     }
+
+    public static void PrintError(string msg, MsgLevel msglv = MsgLevel.Debug) => Print(msg, MsgLevel.Error);
 }

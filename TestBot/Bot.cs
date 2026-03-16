@@ -77,7 +77,7 @@ public class Bot
         m_peer = m_client.Connect(address, channelcount);
         if (m_peer.NativeData == IntPtr.Zero)
         {
-            Log.PrintLog("Connect Fail");
+            Log.Print("Connect Fail");
             return false;
         }
 
@@ -154,12 +154,12 @@ public class Bot
 
         if (!m_peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail Send ChatMessage", MsgLevel.Warning);
+            Log.Print("Fail Send ChatMessage", MsgLevel.Warning);
         }
 
         m_client.Flush();
 
-        Log.PrintLog($"[Bot {id}] Send Chat: {chatMsg}");
+        Log.Print($"[Bot {id}] Send Chat: {chatMsg}");
     }
 
     private string GenerateRandomChatMessage()
@@ -312,7 +312,7 @@ public class Bot
             m_stuckTimer += deltaTime;
             if (m_stuckTimer >= 500.0f)
             {
-                Log.PrintLog($"[Bot {id}] Stuck detected (0.5s)! Picking new direction");
+                Log.Print($"[Bot {id}] Stuck detected (0.5s)! Picking new direction");
 
                 int randomOffset = (rand.Next() % 91) + 45;
                 m_direction = (m_direction + randomOffset) % 360;
@@ -324,7 +324,7 @@ public class Bot
             }
             else if (m_stuckTimer >= 2000.0f)
             {
-                Log.PrintLog($"[Bot {id}] Severely stuck (2s)! Teleporting to random position");
+                Log.Print($"[Bot {id}] Severely stuck (2s)! Teleporting to random position");
 
                 var newX = GetRandPos();
                 var newY = GetRandPos();
@@ -412,7 +412,7 @@ public class Bot
 
         if (!m_peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SendHeartbeat", MsgLevel.Warning);
+            Log.Print("Fail SendHeartbeat", MsgLevel.Warning);
         }
 
         m_client.Flush();
@@ -432,7 +432,7 @@ public class Bot
             case BotState.Connecting:
                 if (m_stateTimer > connectTimeoutSec)
                 {
-                    Log.PrintLog($"[Bot {id}] Connection timeout");
+                    Log.Print($"[Bot {id}] Connection timeout");
                     if (false == m_peer.IsSet)
                     {
                         m_peer.Reset();
@@ -444,7 +444,7 @@ public class Bot
             case BotState.Authenticating:
                 if (m_stateTimer > authTimeoutSec)
                 {
-                    Log.PrintLog($"[Bot {id}] Auth timeout");
+                    Log.Print($"[Bot {id}] Auth timeout");
                     //Disconnect();
                 }
                 break;
@@ -452,7 +452,7 @@ public class Bot
             case BotState.WaitingRoom:
                 if (m_stateTimer > authTimeoutSec)
                 {
-                    Log.PrintLog($"[Bot {id}] Room Entry timeout");
+                    Log.Print($"[Bot {id}] Room Entry timeout");
                     //Disconnect();
                 }
                 break;
@@ -460,7 +460,7 @@ public class Bot
             case BotState.Loading:
                 if (m_stateTimer > authTimeoutSec)
                 {
-                    Log.PrintLog($"[Bot {id}] Load complete timeout");
+                    Log.Print($"[Bot {id}] Load complete timeout");
                     //Disconnect();
                 }
                 break;
@@ -483,7 +483,7 @@ public class Bot
             {
                 case EventType.Connect:
                     m_connected = true;
-                    Log.PrintLog($"[Bot {id}] ===== Connected =====");
+                    Log.Print($"[Bot {id}] ===== Connected =====");
                     SetState(BotState.Authenticating);
                     SendAuthRequest();
                     break;
@@ -505,7 +505,7 @@ public class Bot
                 case EventType.Disconnect:
                     m_connected = false;
                     SetState(BotState.Disconnected);
-                    Log.PrintLog($"[Bot {id}] Disconnected -----");
+                    Log.Print($"[Bot {id}] Disconnected -----");
                     break;
 
                 default: break;
@@ -532,7 +532,7 @@ public class Bot
 
         if (!m_peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SendAuthRequest", MsgLevel.Warning);
+            Log.Print("Fail SendAuthRequest", MsgLevel.Warning);
         }
 
         m_client.Flush();
@@ -549,37 +549,37 @@ public class Bot
         {
             case EProtocol.LC_AuthResponse:
                 OnAuthResponse(packet);
-                Log.PrintLog("OnAuthResponse", MsgLevel.Information);
+                Log.Print("OnAuthResponse", MsgLevel.Information);
                 break;
 
             case EProtocol.SC_EnterRoom:
                 OnEnterRoom(packet);
-                Log.PrintLog("OnEnterRoom", MsgLevel.Information);
+                Log.Print("OnEnterRoom", MsgLevel.Information);
                 break;
 
             case EProtocol.SC_LoadCompleteResponse:
                 OnLoadCompleteResponse(packet);
-                Log.PrintLog("OnLoadCompleteResponse", MsgLevel.Information);
+                Log.Print("OnLoadCompleteResponse", MsgLevel.Information);
                 break;
 
             case EProtocol.SC_AddNotification:
                 OnAddNotification(packet);
-                Log.PrintLog("OnAddNotification", MsgLevel.Information);
+                Log.Print("OnAddNotification", MsgLevel.Information);
                 break;
 
             case EProtocol.SC_RemoveNotification:
                 OnRemoveNotification(packet);
-                Log.PrintLog("OnRemoveNotification", MsgLevel.Information);
+                Log.Print("OnRemoveNotification", MsgLevel.Information);
                 break;
 
             case EProtocol.SC_SyncMove:
                 OnSyncMove(packet);
-                Log.PrintLog("OnSyncMove", MsgLevel.Information);
+                Log.Print("OnSyncMove", MsgLevel.Information);
                 break;
 
             case EProtocol.SC_ChangeStateNotification:
                 OnChangeStateNotification(packet);
-                Log.PrintLog("OnChangeStateNotification", MsgLevel.Information);
+                Log.Print("OnChangeStateNotification", MsgLevel.Information);
                 break;
         }
     }
@@ -597,7 +597,7 @@ public class Bot
             float posX = notification.PositionX;
             float posY = notification.PositionY;
 
-            Log.PrintLog($"[Bot {id}] Respawned at {posX},{posY})");
+            Log.Print($"[Bot {id}] Respawned at {posX},{posY})");
 
             m_posX = posX;
             m_posY = posY;
@@ -605,7 +605,7 @@ public class Bot
             PickRandomDirection();
         }
 
-        Log.PrintLog($"[Bot {id}] State Changed to : {m_objectState.ToString()} ");
+        Log.Print($"[Bot {id}] State Changed to : {m_objectState.ToString()} ");
     }
 
     private void OnSyncMove(ReceivedPacket packet)
@@ -700,7 +700,7 @@ public class Bot
 
         if (!m_peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SendMoveNotification", MsgLevel.Warning);
+            Log.Print("Fail SendMoveNotification", MsgLevel.Warning);
         }
 
         m_client.Flush();
@@ -747,7 +747,7 @@ public class Bot
 
         if (!m_peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SendLoadCompleteRequest", MsgLevel.Warning);
+            Log.Print("Fail SendLoadCompleteRequest", MsgLevel.Warning);
         }
 
         m_client.Flush();

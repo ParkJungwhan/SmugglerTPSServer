@@ -42,8 +42,8 @@ public class ServerManager : IDisposable
         m_nextSessionKey = 10000;
         m_nextPlayerSequence = 1000;
 
-        Log.PrintLog($"ENet Library.Time: \t{Library.Time}", MsgLevel.Information);
-        Log.PrintLog($"SteadyClock.Time: \t{SteadyClock.Now().Timestamp}", MsgLevel.Information);
+        Log.Print($"ENet Library.Time: \t{Library.Time}", MsgLevel.Information);
+        Log.Print($"SteadyClock.Time: \t{SteadyClock.Now().Timestamp}", MsgLevel.Information);
     }
 
     public bool Initialize(string ip, ushort port)
@@ -65,7 +65,7 @@ public class ServerManager : IDisposable
 
         SetHandler();
 
-        Log.PrintLog($"Server initialized on port {port} (max clients: {maxClients}) ");
+        Log.Print($"Server initialized on port {port} (max clients: {maxClients}) ");
 
         Debug.Assert(server != null);
         return server.IsSet;
@@ -80,7 +80,7 @@ public class ServerManager : IDisposable
         Debug.Assert(server != null);
 
         TimeUtil.TimeBeginPeriod(POLL_INTERVAL_MS);
-        Log.PrintLog("Server is running at 30fps with 1ms polling. Press Ctrl+C to stop.");
+        Log.Print("Server is running at 30fps with 1ms polling. Press Ctrl+C to stop.");
 
         var lastFrameTime = SteadyClock.Now();
 
@@ -109,7 +109,7 @@ public class ServerManager : IDisposable
                 var expiredPlayers = roomManager.GetAndClearExpiredPlayers();
                 if (expiredPlayers.Length > 0)
                 {
-                    Log.PrintLog($"[ServerManager] removing session key for expired player count : {expiredPlayers.Length}");
+                    Log.Print($"[ServerManager] removing session key for expired player count : {expiredPlayers.Length}");
                     for (int i = 0; i < expiredPlayers.Length; i++)
                     {
                         var playerSequence = expiredPlayers[i];
@@ -145,7 +145,6 @@ public class ServerManager : IDisposable
 
     public void ReleaseMemory()
     {
-        m_playerSequenceToSessionKey?.Clear();
         m_playerSequenceToSessionKey?.Clear();
         m_playerSequenceToDeviceKey?.Clear();
         m_playerSequenceToUserName?.Clear();
@@ -268,37 +267,37 @@ public class ServerManager : IDisposable
     private bool OnCSChatRequest(Peer peer, CSChatRequest request)
     {
         // 채팅 받으면 전체로 다 쏘기
-        //Log.PrintLog($"[Chat] Player:{request.SessionKey}, Msg: {request.Message}");
+        //Log.Print($"[Chat] Player:{request.SessionKey}, Msg: {request.Message}");
 
         if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
-            Log.PrintLog("[Chat] Player not found for peer", MsgLevel.Warning);
+            Log.Print("[Chat] Player not found for peer", MsgLevel.Warning);
             return false;
         }
 
         if (false == ValidateSessionKey(playerSequence, request.SessionKey))
         {
-            Log.PrintLog("[Chat] Player not found for peer", MsgLevel.Warning);
+            Log.Print("[Chat] Player not found for peer", MsgLevel.Warning);
             return false;
         }
 
         Room room = roomManager.GetPlayerRoom(peer);
         if (room is null)
         {
-            Log.PrintLog("[Chat] Not found room");
+            Log.Print("[Chat] Not found room");
             return false;
         }
 
         string playerName = "Unknown";
         if (false == m_playerSequenceToUserName.TryGetValue(playerSequence, out playerName))
         {
-            Log.PrintLog("[Chat] Not found room");
+            Log.Print("[Chat] Not found room");
         }
 
         PC player = room.GetPlayer(playerSequence);
         if (player is null)
         {
-            Log.PrintLog($"[Chat] Player not found in room");
+            Log.Print($"[Chat] Player not found in room");
             return false;
         }
 
@@ -336,7 +335,7 @@ public class ServerManager : IDisposable
 
         if (!peer.Send(UDPConn.CHANNEL_UNRELIABLE, ref packet))
         {
-            Log.PrintLog("Fail Send Pong", MsgLevel.Warning);
+            Log.Print("Fail Send Pong", MsgLevel.Warning);
         }
 
         server.Flush();
@@ -352,7 +351,7 @@ public class ServerManager : IDisposable
         string userName = string.IsNullOrEmpty(msg.UserName) ? string.Empty : msg.UserName;
         int appearanceId = msg.AppearanceId;
 
-        Log.PrintLog($"[RECV] CL_AuthRequest (Player:{userName}, Appearance: {appearanceId}) ");
+        Log.Print($"[RECV] CL_AuthRequest (Player:{userName}, Appearance: {appearanceId}) ");
 
         int playerSequence = GetOrCreatePlayerSequence(deviceKey);
         int sessionKey = m_nextSessionKey++;
@@ -365,9 +364,10 @@ public class ServerManager : IDisposable
         SendAuthResponse(peer, playerSequence, sessionKey);
         roomManager.AddWaitingPlayer(peer, playerSequence, sessionKey, deviceKey, userName, appearanceId);
 
-        Log.PrintLog($"[SEND] LC_AuthResponse (Seq: {playerSequence}, Session: {sessionKey}) ");
+        Log.Print($"[SEND] LC_AuthResponse (Seq: {playerSequence}, Session: {sessionKey}) ");
 
         Debug.WriteLine($"{DateTime.Now}\t[OnCLAuthRequest] Process Complete : {msg.UserName}, SessionKey : {msg.AppearanceId}");
+
         return true;
     }
 
@@ -377,17 +377,17 @@ public class ServerManager : IDisposable
 
         if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
-            Log.PrintLog("[ServerManager] No find in m_peerToPlayerSequence", MsgLevel.Warning);
+            Log.Print("[ServerManager] No find in m_peerToPlayerSequence", MsgLevel.Warning);
             return false;
         }
 
         if (false == ValidateSessionKey(playerSequence, request.SessionKey))
         {
-            Log.PrintLog($"ValidateSessionKey fail : {playerSequence} == {request.SessionKey}", MsgLevel.Warning);
+            Log.Print($"ValidateSessionKey fail : {playerSequence} == {request.SessionKey}", MsgLevel.Warning);
             return false;
         }
 
-        Log.PrintLog($"[RECV] CS_LoadCompleteRequest (Seq:{playerSequence})");
+        Log.Print($"[RECV] CS_LoadCompleteRequest (Seq:{playerSequence})");
 
         // 1 패킷 lodacomplete 전달
         // 2 룸 매니저에 플레이어 로드 완료 알림
@@ -413,12 +413,12 @@ public class ServerManager : IDisposable
 
         if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SC_LoadCompleteResponse");
+            Log.Print("Fail SC_LoadCompleteResponse");
         }
 
         server.Flush();
 
-        Log.PrintLog($"[SEND] SC_LoadCompleteResponse (Seq:{playerSequence}) ");
+        Log.Print($"[SEND] SC_LoadCompleteResponse (Seq:{playerSequence}) ");
 
         // 룸에 세팅
         Room room = roomManager.GetPlayerRoom(peer);
@@ -428,7 +428,7 @@ public class ServerManager : IDisposable
             if (player is not null)
             {
                 player.SetLoadCompleted(true);
-                Log.PrintLog($"[LoadComplete] Player {playerSequence} load completed");
+                Log.Print($"[LoadComplete] Player {playerSequence} load completed");
             }
 
             if (false == m_playerSequenceToUserName.TryGetValue(playerSequence, out string userName))
@@ -449,7 +449,7 @@ public class ServerManager : IDisposable
                 0.0f,
                 0);
 
-            Log.PrintLog($"[Send] SC_AddNotification broadcasted (Seq: {playerSequence}) ");
+            Log.Print($"[Send] SC_AddNotification broadcasted (Seq: {playerSequence}) ");
         }
 
         Debug.Assert(room is not null);
@@ -469,27 +469,27 @@ public class ServerManager : IDisposable
     {
         if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
-            Log.PrintLog("[ERROR] CS_MoveNotification - peer not found");
+            Log.Print("[ERROR] CS_MoveNotification - peer not found");
             return false;
         }
 
         if (false == ValidateSessionKey(playerSequence, request.SessionKey))
         {
-            Log.PrintLog($"[ERROR] CS_MoveNotification - invalid session key for player {playerSequence}");
+            Log.Print($"[ERROR] CS_MoveNotification - invalid session key for player {playerSequence}");
             return false;
         }
 
         Room room = roomManager.GetPlayerRoom(peer);
         if (room is null)
         {
-            Log.PrintLog($"[ERROR] CS_MoveNotification - room is NULL for player {playerSequence}");
+            Log.Print($"[ERROR] CS_MoveNotification - room is NULL for player {playerSequence}");
             return false;
         }
 
         PC player = room.GetPlayer(playerSequence);
         if (player is null)
         {
-            Log.PrintLog($"[ERROR] CS_MoveNotification - player {playerSequence} not found in room");
+            Log.Print($"[ERROR] CS_MoveNotification - player {playerSequence} not found in room");
             return false;
         }
 
@@ -515,16 +515,16 @@ public class ServerManager : IDisposable
     {
         if (false == m_peerToPlayerSequence.TryGetValue(peer, out int playerSequence))
         {
-            Log.PrintLog("[OnCSAttackRequest] Not found peer user", MsgLevel.Warning);
+            Log.Print("[OnCSAttackRequest] Not found peer user", MsgLevel.Warning);
             return false;
         }
         if (false == ValidateSessionKey(playerSequence, request.SessionKey))
         {
-            Log.PrintLog("[OnCSAttackRequest] No validation CheckUser: {playerSequence}", MsgLevel.Warning);
+            Log.Print($"[OnCSAttackRequest] No validation CheckUser: {playerSequence}", MsgLevel.Warning);
             return false;
         }
 
-        Log.PrintLog($"[RECV] CS_ATTACKRequest (Seq: {playerSequence}, AttackID : {request.AttackId}, Pos: {request.PositionX},{request.PositionY}, Aim: {request.AimDirection})");
+        Log.Print($"[RECV] CS_ATTACKRequest (Seq: {playerSequence}, AttackID : {request.AttackId}, Pos: {request.PositionX},{request.PositionY}, Aim: {request.AimDirection})");
 
         Room room = roomManager.GetPlayerRoom(peer);
         if (room is not null)
@@ -538,7 +538,7 @@ public class ServerManager : IDisposable
 
             room.BroadcastAttackResult(result);
 
-            Log.PrintLog($"[SEND] SC_ATTACK broadcasted (Hit: {result.isHit})");
+            Log.Print($"[SEND] SC_ATTACK broadcasted (Hit: {result.isHit})");
         }
 
         return true;
@@ -588,7 +588,7 @@ public class ServerManager : IDisposable
 
         if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail SendAuthResponse");
+            Log.Print("Fail SendAuthResponse");
         }
 
         server.Flush();
@@ -602,7 +602,8 @@ public class ServerManager : IDisposable
         }
 
         int newSequence = m_nextPlayerSequence++;
-        m_deviceKeyToPlayerSequence[deviceKey] = newSequence;
+        m_deviceKeyToPlayerSequence.Add(deviceKey, newSequence);
+        //m_deviceKeyToPlayerSequence[deviceKey] = newSequence;
         return newSequence;
     }
 

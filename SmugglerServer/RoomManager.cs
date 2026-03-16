@@ -79,12 +79,12 @@ internal class RoomManager
 
             if (!peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
             {
-                Log.PrintLog("Fail SC_EnterRoom");
+                Log.Print("Fail SC_EnterRoom");
             }
 
             m_host?.Flush();
 
-            Log.PrintLog($"[SEND] SC_EnterRoom (Seq: {playerSequence}, Room: {targetRoom.GetRoomCode()}, Appearance: {appearanceId}, Pos: {startX},{startY})");
+            Log.Print($"[SEND] SC_EnterRoom (Seq: {playerSequence}, Room: {targetRoom.GetRoomCode()}, Appearance: {appearanceId}, Pos: {startX},{startY})");
         }
     }
 
@@ -124,7 +124,7 @@ internal class RoomManager
     {
         if (!m_playerRoomMap.TryGetValue(peer, out var room))
         {
-            Log.PrintLog($"no find room : {peer.ID}", MsgLevel.Warning);
+            Log.Print($"no find room : {peer.ID}", MsgLevel.Warning);
         }
         return room;
     }
@@ -170,7 +170,7 @@ internal class RoomManager
 
             if (m_currentRoom is not null && m_currentRoom.GetRoomCode() == room.GetRoomCode())
             {
-                Log.PrintLog($"[RoomManager] Clearing {m_currentRoom.GetRoomCode()} Room (Deleted)", MsgLevel.Information);
+                Log.Print($"[RoomManager] Clearing {m_currentRoom.GetRoomCode()} Room (Deleted)", MsgLevel.Information);
                 m_currentRoom = null;
             }
         }

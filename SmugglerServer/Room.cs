@@ -38,14 +38,14 @@ internal class Room
 
         SpawnRandomBlocks(45, -25.0f, 25.0f, -250f, 25.0f);
 
-        Log.PrintLog($"[Room] Created room '{m_roomCode}' with {m_blocks.Count} blocks");
+        Log.Print($"[Room] Created room '{m_roomCode}' with {m_blocks.Count} blocks");
     }
 
     public void SetHost(Host host) => m_host = host;
 
     private void SpawnRandomBlocks(int count, float minX, float maxX, float minY, float maxY)
     {
-        Log.PrintLog($"[Room] Spawning {count} block walls...");
+        Log.Print($"[Room] Spawning {count} block walls...");
 
         // -25 ~ 25
         if (minX < -25.0f) minX = -25.0f;
@@ -111,7 +111,7 @@ internal class Room
             }
         }
 
-        Log.PrintLog($"[Room] Spawned {totalBlocksSpawned} blocks in {count} walls");
+        Log.Print($"[Room] Spawned {totalBlocksSpawned} blocks in {count} walls");
     }
 
     private void BroadcastBlockAdd(int blockSequence)
@@ -119,7 +119,7 @@ internal class Room
         Block block = GetBlock(blockSequence);
         if (block is null)
         {
-            Log.PrintLog("[Room] Broadcast BlockAdd failed : Block not found");
+            Log.Print("[Room] Broadcast BlockAdd failed : Block not found");
             return;
         }
 
@@ -172,7 +172,7 @@ internal class Room
 
                 if (false == player.GetPeer().Send(UDPConn.CHANNEL_RELIABLE, ref packet))
                 {
-                    Log.PrintLog("Fail Send Room - Block list", MsgLevel.Warning);
+                    Log.Print("Fail Send Room - Block list", MsgLevel.Warning);
                 }
                 else
                     sentCount++;
@@ -180,7 +180,7 @@ internal class Room
         }
 
         m_host?.Flush();
-        Log.PrintLog($"[Room] Block Add broadcast: seq={blockSequence} send to {sentCount} players");
+        Log.Print($"[Room] Block Add broadcast: seq={blockSequence} send to {sentCount} players");
     }
 
     private Block GetBlock(int blockSequence) => m_blocks.TryGetValue(blockSequence, out Block block) ? block : null;
@@ -195,7 +195,7 @@ internal class Room
         block.SetName("Block_" + blockSequence);    // 일단은 설정하고 클라에서는 확인할수 있게(개발용)
 
         m_blocks[blockSequence] = block;
-        Log.PrintLog($"[Room] Block spawned: Seq = {blockSequence} hp={hp} at ({posX}, {posY})");
+        Log.Print($"[Room] Block spawned: Seq = {blockSequence} hp={hp} at ({posX}, {posY})");
 
         return blockSequence;
     }
@@ -344,7 +344,7 @@ internal class Room
 
                 if (!pcpeer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
                 {
-                    Log.PrintLog("Fail Send Room Info", MsgLevel.Warning);
+                    Log.Print("Fail Send Room Info", MsgLevel.Warning);
                 }
             }
         }
@@ -462,7 +462,7 @@ internal class Room
 
         if (false == peer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail Send Pong", MsgLevel.Warning);
+            Log.Print("Fail Send Pong", MsgLevel.Warning);
         }
     }
 
@@ -487,7 +487,7 @@ internal class Room
                 BroadcastRemoveNotification(player.GetSequenceID());
                 player.SetRemoveSent(true);
 
-                Log.PrintLog($"[Room] Player {player.GetSequenceID()} removed (5s after death)");
+                Log.Print($"[Room] Player {player.GetSequenceID()} removed (5s after death)");
             }
 
             if (elapsed >= 6000)
@@ -514,7 +514,7 @@ internal class Room
                     respawnY,
                     player.GetDirection());
 
-                Log.PrintLog($"[Room] Player {player.GetSequenceID()} respawned ad ({respawnX}, {respawnY})");
+                Log.Print($"[Room] Player {player.GetSequenceID()} respawned ad ({respawnX}, {respawnY})");
             }
         }
 
@@ -576,7 +576,7 @@ internal class Room
                     {
                         if (!player.GetPeer().Send(UDPConn.CHANNEL_UNRELIABLE, ref packet))
                         {
-                            Log.PrintLog("Fail Send Pong");
+                            Log.Print("Fail Send Pong");
                         }
                     }
                 }
@@ -654,10 +654,10 @@ internal class Room
 
         if (!player.GetPeer().Send(UDPConn.CHANNEL_RELIABLE, ref packet))
         {
-            Log.PrintLog("Fail Send Pong");
+            Log.Print("Fail Send Pong");
         }
 
-        Log.PrintLog($"[Room] Sent SCChangeStateNotification to player {playerSequence} state={state}");
+        Log.Print($"[Room] Sent SCChangeStateNotification to player {playerSequence} state={state}");
     }
 
     internal int[] GetExpiredPlayers() => m_playersToRemove.ToArray();
@@ -676,7 +676,7 @@ internal class Room
             {
                 m_playersToRemove.Add(player.GetSequenceID());
 
-                Log.PrintLog($"[Room] Player {player.GetSequenceID()} expired (30s cleanup)", MsgLevel.Information);
+                Log.Print($"[Room] Player {player.GetSequenceID()} expired (30s cleanup)", MsgLevel.Information);
             }
         }
 
@@ -702,7 +702,7 @@ internal class Room
 
                 BroadcastRemoveNotification(player.GetSequenceID());
 
-                Log.PrintLog($"[Room] Player {player.GetSequenceID()} disconnected (timeout) : {timeSinceLastReceived}", MsgLevel.Information);
+                Log.Print($"[Room] Player {player.GetSequenceID()} disconnected (timeout) : {timeSinceLastReceived}", MsgLevel.Information);
             }
         }
     }
@@ -764,7 +764,7 @@ internal class Room
 
             if (!pcpeer.Send(UDPConn.CHANNEL_RELIABLE, ref packet))
             {
-                Log.PrintLog("Fail - Send Broadcast Remove Noti", MsgLevel.Warning);
+                Log.Print("Fail - Send Broadcast Remove Noti", MsgLevel.Warning);
             }
         }
     }
@@ -867,7 +867,7 @@ internal class Room
             if (npcTarget is null) { return result; }
         }
 
-        Log.PrintLog($"[Room] Attack proccese - Attacker : {attackerSequence}, Hit: {result.isHit}, Target: {result.targetSequence}, HP: {result.targetCurrentHp}");
+        Log.Print($"[Room] Attack proccese - Attacker : {attackerSequence}, Hit: {result.isHit}, Target: {result.targetSequence}, HP: {result.targetCurrentHp}");
 
         return result;
     }
@@ -916,13 +916,13 @@ internal class Room
 
                 if (false == player.GetPeer().Send(UDPConn.CHANNEL_RELIABLE, ref packet))
                 {
-                    Log.PrintLog($"[Room] Fail Send user in Room {player.GetAppearanceID()}", MsgLevel.Warning);
+                    Log.Print($"[Room] Fail Send user in Room {player.GetAppearanceID()}", MsgLevel.Warning);
                 }
                 else
                     sentCount++;
             }
         }
-        Log.PrintLog($"[SEND] broadcast to all user in Room('{m_roomCode}') : {protocol.ToString()}");
+        Log.Print($"[SEND] broadcast to all user in Room('{m_roomCode}') : {protocol.ToString()}");
     }
 
     internal bool BroadcastChat(int playerSequence, string? playerName, string msg, float posX, float posY)
@@ -946,7 +946,7 @@ internal class Room
             EProtocol.SC_SyncChat,
             builder);
 
-        Log.PrintLog($"[Room] broadcastChat - Total players in room: {m_players.Count}");
+        Log.Print($"[Room] broadcastChat - Total players in room: {m_players.Count}");
 
         SendAllUserInRoomRELIABLE(wrapper, EProtocol.SC_SyncChat);
 
